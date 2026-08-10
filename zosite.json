@@ -1,0 +1,15 @@
+{
+  "name": "daily-routine-dashboard",
+  "local_port": 52431,
+  "entrypoint": "bun run dev",
+  "publish": {
+    "label": "daily-routine-dashboard",
+    "type": "http",
+    "entrypoint": "bun run prod",
+    "published_port": 52588,
+    "env": {
+      "NODE_ENV": "production",
+      "ZO_CLIENT_IDENTITY_TOKEN": "none"
+    }
+  }
+}
