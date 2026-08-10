@@ -2,7 +2,9 @@ This file provides guidance when working with code in this repository. The READM
 
 # Project Notes
 
-<!-- Documentation for this specific project goes here. This will include both an articulation of what this project aims to accomplish as well as technical details about how it works. This means explaining the purpose of the project as a whole along with an overview of the design choices. -->
+Daymark is the routine dashboard built for the user's daily schedule. It is the app's homepage and is designed for mobile-first personal use. It has nine timed routine sessions, one-tap done states, browser notification permission for alarms, rotating weekday improvement tasks, a daily note, and a Forex/Hackathon deep-work choice. Progress is stored in browser local storage on the current device.
+
+The main Daymark screen lives in `src/pages/daymark.tsx` and is mounted at `/` from `src/App.tsx`. The original starter data demo remains available at `/data-demo`, and the component gallery remains available at `/_design`.
 
 ---
 
