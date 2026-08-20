@@ -2,15 +2,19 @@ import { useEffect, useState } from "react";
 import { Bell, Check, Flame, RotateCcw, Sparkles, Target } from "lucide-react";
 
 const routine = [
-  ["06:00", "Workout", "⚡", ["Complete a 30-minute session", "Stretch for five minutes", "Drink water and note your energy"]],
-  ["06:30", "Morning routine", "☀", ["Make your bed and reset your space", "Plan your top three outcomes", "Read or journal for ten minutes"]],
-  ["07:00", "Deep work", "◆", ["Complete the chosen Forex or Hackathon block", "Keep your phone away", "Write one line about your progress"]],
-  ["09:00", "AI prompting practice", "✦", ["Write three prompt variations", "Test one prompt on a real task", "Save the strongest result"]],
-  ["13:00", "Editing / content / reading", "◒", ["Improve one piece of content", "Read ten useful pages", "Capture one idea for later"]],
-  ["17:00", "Publish content", "↗", ["Finish the headline and hook", "Publish on one main platform", "Cross-post or schedule the rest"]],
-  ["20:00", "Replying guys", "◌", ["Reply to the most important messages", "Add value to three conversations", "Clear anything waiting on you"]],
-  ["21:30", "Reviewing Forex", "↗", ["Review setups and market context", "Journal entries and risk", "Write tomorrow's lesson"]],
-  ["00:00", "Software engineer", "⌘", ["Complete the next course lesson", "Do the coding exercise", "Save one takeaway or commit"]],
+  ["06:00", "Workout", "⚡", ["Warm-up", "15 push-ups", "20 squats", "12 lunges per leg", "30-sec plank", "20 mountain climbers per leg", "15 glute bridges", "30-sec jumping jacks", "Stretch"]],
+  ["06:30", "Morning routine", "☀", ["Shower", "Breakfast / coffee", "Check overnight Forex and news", "Review top 3 priorities"]],
+  ["07:00", "Forex deep work", "◆", ["Chart review", "Forex journal", "Concept study", "Write one market takeaway"]],
+  ["07:45", "Hackathon build", "◇", ["Continue the active hackathon build", "Ship one concrete improvement", "Test what changed", "Record progress"]],
+  ["09:00", "AI prompting practice", "✦", ["Practice prompt design", "Test prompts on a real task", "Refine the strongest result", "Breakfast / light meal"]],
+  ["11:30", "AI content creation", "✎", ["Create the day's AI content", "Develop the hook and core idea", "Prepare the asset for editing"]],
+  ["13:00", "Editing / content work", "◒", ["Edit content", "Continue content work", "Reading", "Capture one useful idea"]],
+  ["14:30", "Forex session check", "↗", ["Check the active Forex session", "Review setups and market context", "Update journal if needed"]],
+  ["15:00", "Arc building update", "⌁", ["Work on Arc", "Record what was built", "Prepare the daily building update"]],
+  ["17:00", "Publish & engage", "↗", ["Publish content", "Engage with the community", "Reply to meaningful conversations"]],
+  ["20:00", "Structured learning", "⌘", ["Frontend → Backend → Security rotation", "Study the current concept", "Complete a hands-on exercise", "Save one key takeaway"]],
+  ["21:30", "Review & journal", "◌", ["Review the day", "Review Forex", "Journal wins and mistakes", "Write tomorrow's priorities"]],
+  ["00:00", "Frontend development", "⌘", ["Concept study / hands-on build", "Work on a personal project", "Test and improve the implementation", "Commit meaningful work to GitHub"]],
 ] as const;
 
 const weekly = [
@@ -46,6 +50,7 @@ export default function Daymark() {
       setDone(JSON.parse(localStorage.getItem("daymark-done") || "{}"));
       setChecked(JSON.parse(localStorage.getItem("daymark-tasks") || "{}"));
       setAlarms(localStorage.getItem("daymark-alarms") === "on");
+      setNote(localStorage.getItem(`daymark-note-${today}`) || "");
     } catch {
       setDone({});
       setChecked({});
@@ -59,6 +64,10 @@ export default function Daymark() {
   useEffect(() => {
     localStorage.setItem("daymark-tasks", JSON.stringify(checked));
   }, [checked]);
+
+  useEffect(() => {
+    localStorage.setItem(`daymark-note-${today}`, note);
+  }, [note, today]);
 
   const complete = routine.filter((_, index) => done[`${today}-${index}`]).length;
   const active = routine[selected];
@@ -84,6 +93,7 @@ export default function Daymark() {
     setDone({});
     setChecked({});
     setNote("");
+    localStorage.removeItem(`daymark-note-${today}`);
   };
 
   return (
@@ -130,10 +140,10 @@ export default function Daymark() {
             <div className="flex items-center justify-between rounded-3xl bg-[#1f3d2c] p-6 text-white sm:p-8">
               <div className="flex items-start gap-4">
                 <span className="grid size-10 place-items-center rounded-2xl bg-[#b9d62e] text-[#1f3d2c]"><Target size={19} /></span>
-                <div><span className="text-sm text-[#b7c8b9]">Today's progress</span><strong className="mt-1 block text-4xl">{complete}<i className="text-lg font-normal text-[#b7c8b9]"> / 9</i></strong><p className="mt-1 text-sm text-[#b7c8b9]">{9 - complete} sessions left to complete your rhythm.</p></div>
+                <div><span className="text-sm text-[#b7c8b9]">Today's progress</span><strong className="mt-1 block text-4xl">{complete}<i className="text-lg font-normal text-[#b7c8b9]"> / 13</i></strong><p className="mt-1 text-sm text-[#b7c8b9]">{13 - complete} checkpoints left to complete your rhythm.</p></div>
               </div>
-              <div className="grid size-24 place-items-center rounded-full" style={{ background: `conic-gradient(#b9d62e ${complete * 40}deg, #45634c ${complete * 40}deg)` }}>
-                <div className="grid size-[76px] place-items-center rounded-full bg-[#1f3d2c] text-center"><b>{Math.round((complete / 9) * 100)}%</b><small className="block text-[9px] text-[#b7c8b9]">done</small></div>
+              <div className="grid size-24 place-items-center rounded-full" style={{ background: `conic-gradient(#b9d62e ${complete * 27.6923}deg, #45634c ${complete * 27.6923}deg)` }}>
+                <div className="grid size-[76px] place-items-center rounded-full bg-[#1f3d2c] text-center"><b>{Math.round((complete / 13) * 100)}%</b><small className="block text-[9px] text-[#b7c8b9]">done</small></div>
               </div>
             </div>
             <div className="rounded-3xl border border-[#dfe4dc] bg-white p-6 sm:p-8">
