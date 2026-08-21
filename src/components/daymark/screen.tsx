@@ -5,6 +5,7 @@ import { useDaymark } from "@/lib/daymark/store";
 import { blankCheckpoint } from "@/lib/daymark/templates";
 import type { Checkpoint } from "@/lib/daymark/types";
 import { CheckpointEditor } from "./checkpoint-editor";
+import { Landing } from "./landing";
 import { Onboarding } from "./onboarding";
 import { ProgressView } from "./progress-view";
 import { RoutineView } from "./routine-view";
@@ -26,20 +27,16 @@ export function DaymarkScreen({
   view: DaymarkView;
   onNavigate: (view: DaymarkView) => void;
 }) {
-  const { ready, profile, routine, saveCheckpoint, deleteCheckpoint } = useDaymark();
+  const { ready, entered, enterApp, profile, routine, saveCheckpoint, deleteCheckpoint } = useDaymark();
   const [editing, setEditing] = useState<Checkpoint | null>(null);
 
-  if (!ready) {
+  if (!ready || !entered) {
     return (
-      <main className="grid min-h-dvh place-items-center bg-canvas px-6 text-ink">
-        <div className="text-center">
-          <div className="mb-5 flex items-center justify-center gap-2 text-lg font-bold tracking-tight">
-            <DaymarkMark />
-            daymark
-          </div>
-          <p className="text-sm text-quiet">Build a daily rhythm that works for you.</p>
-        </div>
-      </main>
+      <Landing
+        ready={ready}
+        returning={Boolean(profile.onboarded || routine)}
+        onEnter={enterApp}
+      />
     );
   }
 
@@ -63,7 +60,7 @@ export function DaymarkScreen({
     <main className="min-h-dvh bg-canvas text-ink">
       <div className="mx-auto flex max-w-6xl flex-col lg:flex-row">
         <aside className="hidden min-h-screen w-64 flex-col border-r border-line bg-cream p-7 lg:flex">
-          <div className="mb-16 flex items-center gap-2 text-lg font-bold tracking-tight">
+          <div className="mb-16 flex items-center justify-center gap-2 text-lg font-bold tracking-tight">
             <DaymarkMark />
             daymark
           </div>
