@@ -25,8 +25,8 @@ const routine = [
   ["13:00", "Editing / content", "◒", ["Edit content", "Continue content work", "Reading", "Capture one useful idea"]],
   ["14:30", "Forex session check", "↗", ["Check the active Forex session", "Review setups and market context", "Update journal if needed"]],
   ["15:00", "Arc building update", "⌁", ["Work on Arc", "Record what was built", "Prepare the daily building update"]],
-  ["17:00", "Publish + engage", "↗", ["Publish content", "Engage with the community", "Reply to meaningful conversations"]],
-  ["20:00", "Frontend → Backend → Security", "⌘", ["Frontend → Backend → Security rotation", "Study the current concept", "Complete a hands-on exercise", "Save one key takeaway"]],
+  ["17:00", "Video editing tutorials", "▶", ["Watch one tutorial", "Practice one technique from it", "Apply it to a real clip", "Save one editing takeaway"]],
+  ["20:00", "Zo computer Review", "⌘", ["Review what was built on Zo computer", "Check shipped work and open issues", "Note blockers", "Plan the next Zo session"]],
   ["21:30", "Review + journal", "◌", ["Review the day", "Review Forex", "Journal wins and mistakes", "Write tomorrow's priorities"]],
   ["00:00", "Frontend development", "⌘", ["Concept study / hands-on build", "Work on a personal project", "Test and improve the implementation", "Commit meaningful work to GitHub"]],
 ] as const;
