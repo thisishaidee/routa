@@ -53,7 +53,7 @@ export const TEMPLATE_OPTIONS = [
   { id: "fitness", name: "Fitness", blurb: "Training, fuel, recovery, and a journal." },
   { id: "balanced", name: "Balanced day", blurb: "Work, life, and a daily reset." },
   { id: "builder", name: "Builder", blurb: "A full-day making rhythm with thirteen checkpoints." },
-  { id: "custom", name: "Start from scratch", blurb: "Empty routine — add only what you need." },
+  { id: "custom", name: "Start from scratch", blurb: "Empty routine, add only what you need." },
 ] as const;
 
 export type TemplateId = (typeof TEMPLATE_OPTIONS)[number]["id"];
@@ -120,7 +120,7 @@ export function buildTemplate(templateId: TemplateId): Routine {
           time: "06:00",
           title: "Workout",
           icon: "dumbbell",
-          tasks: ["Warm-up", `Round 1 — ${CIRCUIT}`, `Round 2 — ${CIRCUIT}`, `Round 3 — ${CIRCUIT}`, "Stretch"],
+          tasks: ["Warm-up", `Round 1: ${CIRCUIT}`, `Round 2: ${CIRCUIT}`, `Round 3: ${CIRCUIT}`, "Stretch"],
         },
         { time: "06:30", title: "Morning routine", icon: "sun", tasks: ["Shower", "Breakfast / coffee", "Check overnight news", "Review top 3 priorities"] },
         { time: "07:00", title: "Markets / craft", icon: "target", tasks: ["Chart or craft review", "Journal", "Study one concept", "Write one takeaway"] },

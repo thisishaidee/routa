@@ -14,7 +14,7 @@ export function Landing({
       <div className="flex flex-col items-center text-center">
         <div className="daymark-rise mb-5 flex items-center justify-center gap-2 text-lg font-bold tracking-tight">
           <DaymarkMark />
-          daymark
+          routa
         </div>
         <p className="daymark-rise-delay text-sm text-quiet">Build a daily rhythm that works for you.</p>
         {ready ? (

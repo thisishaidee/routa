@@ -8,6 +8,7 @@ import {
   clearV2Storage,
   dayProgress,
   loadSnapshot,
+  migrateLegacyV2IfNeeded,
   readSessionEntered,
   saveNotes,
   saveProfile,
@@ -101,6 +102,7 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       migrateV1IfNeeded();
+      migrateLegacyV2IfNeeded();
       const snapshot = loadSnapshot();
       setProfile(snapshot.profile);
       setRoutine(snapshot.routine);
