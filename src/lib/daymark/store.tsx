@@ -4,14 +4,17 @@ import { migrateV1IfNeeded } from "./migration";
 import { registerReminderWorker, reminderPermission, requestReminderPermission, tickReminders } from "./notifications";
 import { computeStats, isDone, isTaskDone, toggleId } from "./progress";
 import {
+  clearSessionEntered,
   clearV2Storage,
   dayProgress,
   loadSnapshot,
+  readSessionEntered,
   saveNotes,
   saveProfile,
   saveProgress,
   saveRoutine,
   saveSettings,
+  writeSessionEntered,
 } from "./storage";
 import { emptyRoutine } from "./templates";
 import {
@@ -29,6 +32,8 @@ import { normalizeTime, todayKey as dateKey } from "./time";
 
 interface DaymarkContextValue {
   ready: boolean;
+  entered: boolean;
+  enterApp: () => void;
   now: Date;
   today: string;
   profile: Profile;
@@ -79,6 +84,7 @@ function sanitizeCheckpoint(checkpoint: Checkpoint): Checkpoint {
 
 export function DaymarkProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
+  const [entered, setEntered] = useState(false);
   const [now, setNow] = useState(() => new Date());
   const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE);
   const [routine, setRoutine] = useState<Routine | null>(null);
@@ -103,6 +109,7 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
       setSettings(snapshot.settings);
       setPermission(reminderPermission());
       void registerReminderWorker();
+      if (readSessionEntered()) setEntered(true);
     } catch {
       // Corrupted storage should never trap the app on the loading screen.
     }
@@ -147,6 +154,11 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
     }, 15000);
     return () => window.clearInterval(tick);
   }, [ready, routine, settings]);
+
+  const enterApp = () => {
+    writeSessionEntered();
+    setEntered(true);
+  };
 
   const updateProfile = (patch: Partial<Profile>) => {
     setProfile((value) => ({ ...value, ...patch }));
@@ -290,16 +302,20 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
 
   const clearAllData = () => {
     clearV2Storage();
+    clearSessionEntered();
     setProfile(DEFAULT_PROFILE);
     setRoutine(null);
     setProgress({});
     setNotes({});
     setSettings(DEFAULT_SETTINGS);
     setSelectedId(null);
+    setEntered(false);
   };
 
   const value: DaymarkContextValue = {
     ready,
+    entered,
+    enterApp,
     now,
     today,
     profile,
