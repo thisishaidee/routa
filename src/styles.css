@@ -5,8 +5,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Explicit cascade-layer order (Tailwind v4 already establishes it; restated
-   so the precedence model is visible). App CSS belongs in @layer base. */
 @layer theme, base, components, utilities;
 
 :root {
@@ -130,6 +128,24 @@ body {
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* Daymark product palette */
+@theme {
+  --color-canvas: #f5f6f2;
+  --color-cream: #f9faf7;
+  --color-paper: #ffffff;
+  --color-ink: #18201c;
+  --color-quiet: #718078;
+  --color-soft: #8a978f;
+  --color-line: #dfe4dc;
+  --color-forest: #1f3d2c;
+  --color-forest-mid: #45634c;
+  --color-lime: #b9d62e;
+  --color-mist: #e8efcf;
+  --color-olive: #5c762c;
+  --color-danger: #9a3b32;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -138,12 +154,6 @@ body {
     @apply bg-background text-foreground;
   }
 
-  /* Clickable things show the hand cursor — app-wide, from one place.
-     Tailwind v4's Preflight no longer sets `cursor: pointer` on `<button>`,
-     so instead of sprinkling `cursor-pointer` onto each control, every
-     enabled interactive element gets it here. This lives in `@layer base`,
-     below utilities, so a component needing a different cursor still wins
-     with a `cursor-*` utility. Disabled controls keep the default arrow. */
   button:not(:disabled),
   summary,
   select:not(:disabled),
