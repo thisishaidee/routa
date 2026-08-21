@@ -18,6 +18,14 @@ import {
 import { isValidTime, normalizeTime } from "./time";
 
 export const STORAGE_KEYS = {
+  profile: "routa:v2:profile",
+  routine: "routa:v2:routine",
+  progress: "routa:v2:progress",
+  notes: "routa:v2:notes",
+  settings: "routa:v2:settings",
+} as const;
+
+export const LEGACY_STORAGE_KEYS = {
   profile: "daymark:v2:profile",
   routine: "daymark:v2:routine",
   progress: "daymark:v2:progress",
@@ -25,14 +33,49 @@ export const STORAGE_KEYS = {
   settings: "daymark:v2:settings",
 } as const;
 
-export const SESSION_KEY = "daymark:v2:entered";
+export const SESSION_KEY = "routa:v2:entered";
+const LEGACY_SESSION_KEY = "daymark:v2:entered";
 
-export function readSessionEntered(): boolean {
+function migrateKey(current: string, legacy: string) {
   try {
-    return sessionStorage.getItem(SESSION_KEY) === "1";
+    if (localStorage.getItem(current)) return;
+    const previous = localStorage.getItem(legacy);
+    if (previous) localStorage.setItem(current, previous);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function migrateLegacyV2IfNeeded() {
+  (Object.keys(STORAGE_KEYS) as Array<keyof typeof STORAGE_KEYS>).forEach((key) => {
+    migrateKey(STORAGE_KEYS[key], LEGACY_STORAGE_KEYS[key]);
+  });
+}
+
+export function hasAnyV2Data() {
+  try {
+    return Boolean(
+      localStorage.getItem(STORAGE_KEYS.routine) ||
+        localStorage.getItem(STORAGE_KEYS.profile) ||
+        localStorage.getItem(LEGACY_STORAGE_KEYS.routine) ||
+        localStorage.getItem(LEGACY_STORAGE_KEYS.profile),
+    );
   } catch {
     return false;
   }
+}
+
+export function readSessionEntered(): boolean {
+  try {
+    if (sessionStorage.getItem(SESSION_KEY) === "1") return true;
+    if (sessionStorage.getItem(LEGACY_SESSION_KEY) === "1") {
+      sessionStorage.setItem(SESSION_KEY, "1");
+      return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
 }
 
 export function writeSessionEntered() {

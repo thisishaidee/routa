@@ -1,5 +1,5 @@
 import { buildTemplate } from "./templates";
-import { STORAGE_KEYS, saveNotes, saveProfile, saveProgress, saveRoutine, saveSettings } from "./storage";
+import { hasAnyV2Data, saveNotes, saveProfile, saveProgress, saveRoutine, saveSettings } from "./storage";
 import type { NotesMap, ProgressMap } from "./types";
 
 const V1_DONE = "daymark-done";
@@ -23,11 +23,7 @@ function parseRecord(raw: string | null): Record<string, boolean> {
 }
 
 function hasV2Data() {
-  try {
-    return Boolean(localStorage.getItem(STORAGE_KEYS.routine) || localStorage.getItem(STORAGE_KEYS.profile));
-  } catch {
-    return false;
-  }
+  return hasAnyV2Data();
 }
 
 export function hasV1Data() {

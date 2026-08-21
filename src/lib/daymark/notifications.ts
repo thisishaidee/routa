@@ -26,12 +26,16 @@ export async function registerReminderWorker() {
 }
 
 function alarmKey(date: Date, checkpointId: string) {
+  return `routa:v2:alarm:${todayKey(date)}:${checkpointId}`;
+}
+
+function legacyAlarmKey(date: Date, checkpointId: string) {
   return `daymark:v2:alarm:${todayKey(date)}:${checkpointId}`;
 }
 
-function alreadyFired(key: string) {
+function alreadyFired(key: string, legacy: string) {
   try {
-    return sessionStorage.getItem(key) === "1";
+    return sessionStorage.getItem(key) === "1" || sessionStorage.getItem(legacy) === "1";
   } catch {
     return false;
   }
@@ -61,10 +65,10 @@ export function tickReminders(input: ReminderTick, date = new Date()) {
     if (!checkpoint.repeatDays.includes(day)) continue;
     if (checkpoint.time !== stamp) continue;
     const key = alarmKey(date, checkpoint.id);
-    if (alreadyFired(key)) continue;
+    if (alreadyFired(key, legacyAlarmKey(date, checkpoint.id))) continue;
     markFired(key);
     try {
-      new Notification(`Daymark · ${checkpoint.title}`, {
+      new Notification(`Routa · ${checkpoint.title}`, {
         body: `Time for ${checkpoint.title}.`,
         tag: key,
       });
