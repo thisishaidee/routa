@@ -25,6 +25,32 @@ export const STORAGE_KEYS = {
   settings: "daymark:v2:settings",
 } as const;
 
+export const SESSION_KEY = "daymark:v2:entered";
+
+export function readSessionEntered(): boolean {
+  try {
+    return sessionStorage.getItem(SESSION_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function writeSessionEntered() {
+  try {
+    sessionStorage.setItem(SESSION_KEY, "1");
+  } catch {
+    /* ignore */
+  }
+}
+
+export function clearSessionEntered() {
+  try {
+    sessionStorage.removeItem(SESSION_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 const FOCUS_IDS = new Set<string>(FOCUS_AREAS.map((item) => item.id));
 
 function readJson(key: string): unknown {
