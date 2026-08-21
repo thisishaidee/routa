@@ -60,9 +60,9 @@ export function DaymarkScreen({
     <main className="min-h-dvh bg-canvas text-ink">
       <div className="mx-auto flex max-w-6xl flex-col lg:flex-row">
         <aside className="hidden min-h-screen w-64 flex-col border-r border-line bg-cream p-7 lg:flex">
-          <div className="mb-16 flex items-center justify-center gap-2 text-lg font-bold tracking-tight">
+          <div className="mb-16 flex items-center gap-2 text-lg font-bold tracking-tight">
             <DaymarkMark />
-            daymark
+            routa
           </div>
           <nav className="space-y-2 text-sm">
             {NAV.map((item) => {
@@ -88,7 +88,7 @@ export function DaymarkScreen({
             </span>
             <span className="text-xs">
               <b className="block">{profile.name.trim() || "Your rhythm"}</b>
-              <small className="text-quiet">{routine?.name || "Daymark"}</small>
+              <small className="text-quiet">{routine?.name || "Routa"}</small>
             </span>
           </div>
         </aside>
@@ -102,7 +102,7 @@ export function DaymarkScreen({
           {view === "settings" ? <SettingsView /> : null}
 
           <footer className="hidden justify-between border-t border-line px-12 py-5 text-[11px] text-soft lg:flex">
-            <span>daymark · build your rhythm</span>
+            <span>routa · build your rhythm</span>
             <span>Reminders fire while this page is open.</span>
           </footer>
         </div>

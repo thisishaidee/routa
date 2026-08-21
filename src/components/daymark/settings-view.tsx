@@ -32,7 +32,7 @@ export function SettingsView() {
   return (
     <section className="px-5 py-6 sm:px-8 lg:px-12 lg:py-12">
       <p className="text-xs font-bold uppercase tracking-[0.16em] text-quiet">Settings</p>
-      <h1 className="mt-2 text-3xl font-black tracking-[-0.04em]">Your Daymark</h1>
+      <h1 className="mt-2 text-3xl font-black tracking-[-0.04em]">Your Routa</h1>
 
       <div className="mt-6 space-y-4">
         <label className="block rounded-3xl border border-line bg-paper p-5 text-xs font-bold text-quiet">
@@ -77,9 +77,9 @@ export function SettingsView() {
 
         <div className="rounded-3xl border border-line bg-paper p-5">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-soft">Reminders</p>
-          <h2 className="mt-2 text-xl font-black">Enable Daymark reminders</h2>
+          <h2 className="mt-2 text-xl font-black">Enable Routa reminders</h2>
           <p className="mt-2 text-pretty text-sm leading-6 text-quiet">
-            Daymark can notify you in this browser while the app is open. It cannot silently add alarms to your phone's Clock app.
+            Routa can notify you in this browser while the app is open. It cannot silently add alarms to your phone's Clock app.
           </p>
 
           {permission === "unsupported" ? (

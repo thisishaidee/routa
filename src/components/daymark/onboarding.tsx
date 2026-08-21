@@ -15,7 +15,7 @@ export function Onboarding() {
   const [draftRoutine, setDraftRoutine] = useState<Routine | null>(null);
 
   const toggleFocus = (id: FocusAreaId) => {
-    setFocusAreas((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+    setFocusAreas((current) => (current.includes(id) ? current.filter((item) => item.id !== id) : [...current, id]));
   };
 
   const goPreview = () => {
@@ -48,7 +48,7 @@ export function Onboarding() {
       <div className="mx-auto flex min-h-[80dvh] max-w-lg flex-col">
         <div className="mb-10 flex items-center gap-2 text-lg font-bold tracking-tight">
           <DaymarkMark />
-          daymark
+          routa
         </div>
 
         {step === 0 ? (
@@ -56,7 +56,7 @@ export function Onboarding() {
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-quiet">Welcome</p>
             <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-balance">Build a daily rhythm that fits your life.</h1>
             <p className="mt-4 text-pretty text-sm leading-6 text-quiet">
-              Plan checkpoints, get reminded at the right time, and see the day through. No one else's routine — yours.
+              Plan checkpoints, get reminded at the right time, and see the day through. No one else's routine, yours.
             </p>
             <label className="mt-8 text-xs font-bold text-quiet">
               What should we call you?
@@ -184,7 +184,7 @@ export function Onboarding() {
                 Back
               </button>
               <button type="button" onClick={finish} className="h-12 flex-1 rounded-2xl bg-forest text-sm font-bold text-paper">
-                Start my Daymark
+                Start my Routa
               </button>
             </div>
           </section>
