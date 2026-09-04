@@ -191,6 +191,8 @@ export function coerceRoutine(value: unknown): Routine | null {
   return {
     id: asString(value.id, "routine_default"),
     name: asString(value.name, "My routine"),
+    description: asString(value.description) || undefined,
+    active: asBoolean(value.active, true),
     checkpoints,
     createdAt: asString(value.createdAt) || new Date().toISOString(),
     updatedAt: asString(value.updatedAt) || new Date().toISOString(),
@@ -249,13 +251,32 @@ function coerceNotes(value: unknown): NotesMap {
 }
 
 export function loadSnapshot(): DaymarkSnapshot {
+  return coerceSnapshot({
+    profile: readJson(STORAGE_KEYS.profile),
+    routine: readJson(STORAGE_KEYS.routine),
+    progress: readJson(STORAGE_KEYS.progress),
+    notes: readJson(STORAGE_KEYS.notes),
+    settings: readJson(STORAGE_KEYS.settings),
+  });
+}
+
+export function coerceSnapshot(value: unknown): DaymarkSnapshot {
+  const record = isRecord(value) ? value : {};
   return {
-    profile: coerceProfile(readJson(STORAGE_KEYS.profile)),
-    routine: coerceRoutine(readJson(STORAGE_KEYS.routine)),
-    progress: coerceProgress(readJson(STORAGE_KEYS.progress)),
-    notes: coerceNotes(readJson(STORAGE_KEYS.notes)),
-    settings: coerceSettings(readJson(STORAGE_KEYS.settings)),
+    profile: coerceProfile(record.profile),
+    routine: coerceRoutine(record.routine),
+    progress: coerceProgress(record.progress),
+    notes: coerceNotes(record.notes),
+    settings: coerceSettings(record.settings),
   };
+}
+
+export function applySnapshot(snapshot: DaymarkSnapshot) {
+  saveProfile(snapshot.profile);
+  saveRoutine(snapshot.routine);
+  saveProgress(snapshot.progress);
+  saveNotes(snapshot.notes);
+  saveSettings(snapshot.settings);
 }
 
 export function saveProfile(profile: Profile) {
@@ -287,12 +308,29 @@ export function saveSettings(settings: Settings) {
 }
 
 export function clearV2Storage() {
-  for (const key of Object.values(STORAGE_KEYS)) {
+  const extra = [
+    ...Object.values(LEGACY_STORAGE_KEYS),
+    "daymark-done",
+    "daymark-tasks",
+    "daymark-alarms",
+    "routa:v2:alarms",
+  ];
+  for (const key of [...Object.values(STORAGE_KEYS), ...extra]) {
     try {
       localStorage.removeItem(key);
     } catch {
       /* ignore */
     }
+  }
+  try {
+    const pending: string[] = [];
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("daymark-note-")) pending.push(key);
+    }
+    pending.forEach((key) => localStorage.removeItem(key));
+  } catch {
+    /* ignore */
   }
 }
 

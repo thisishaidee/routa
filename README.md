@@ -4,16 +4,38 @@ This file provides guidance when working with code in this repository. The READM
 
 Routa is a daily rhythm product for anyone who wants a structured day. It is the app homepage and is designed mobile-first.
 
-V2 includes:
-- Template-based onboarding, including a 13-checkpoint Builder rhythm
-- A routine editor for times, titles, tasks, repeat days, and reminders
-- Daily notes and progress against the live routine (X / 13 when Builder is used)
-- Browser notifications while the app is open (not native phone Clock alarms)
-- Local persistence on the current device
-
-Existing Daymark V2 data is copied forward to Routa keys (`routa:v2:*`) without wiping the old `daymark:v2:*` keys, so returning users keep their routine, progress, notes, and reminder settings. V1 keys (`daymark-done`, `daymark-tasks`, `daymark-alarms`, `daymark-note-*`) still migrate when no V2 data exists.
-
 The lime incomplete-circle mark is unchanged. Only the wordmark and product name changed from Daymark to Routa.
+
+## Current product (V4 + alarm architecture)
+
+- Template-based onboarding, including a 13-checkpoint Builder rhythm
+- A routine editor for times, titles, tasks, task order, repeat days, and reminders
+- Daily completion lives on the day, never on the task definition
+- Progress: remaining, missed, tasks, current/best streak, finished days, health, insights, suggestions
+- JSON backup export/import (`app: "routa"`, snapshot version 4)
+- PWA manifest for install; reminders still need the app open on web
+- Local persistence on the current device. No accounts. No cloud.
+
+### Reminders / alarms (honest)
+
+Web / PWA:
+- Browser notifications while Routa is open
+- Web Push is detected, not subscribed (no server yet)
+- Status is **On while open**, never **Scheduled**
+- Never claims “Alarm added to your phone”
+- Permission is requested only when the user turns reminders on
+- If denied: **Reminders are disabled**
+
+Native (prepared, not live in this web build):
+- Platform-independent `AlarmScheduler` in `src/lib/daymark/alarms/`
+- Android contract: AlarmManager exact next-occurrence + boot/timezone reschedule (`native/android`)
+- iOS contract: AlarmKit weekly recurrence + notification fallback (`native/ios`)
+- Native only reports **Scheduled** when `window.RoutaNativeAlarms` is injected and exact alarms are actually available
+- ROUTA never writes into the Clock app
+
+Routine is the source of truth. Desired alarms are derived from checkpoints. The local registry (`routa:v2:alarms`) is a cache, not an independent object.
+
+Existing Daymark V2 data is copied forward to Routa keys (`routa:v2:*`) without wiping the old `daymark:v2:*` keys. V1 keys (`daymark-done`, `daymark-tasks`, `daymark-alarms`, `daymark-note-*`) still migrate when no V2 data exists.
 
 The main Routa screen lives in `src/pages/daymark.tsx` and is mounted at `/` from `src/App.tsx`. The original starter data demo remains available at `/data-demo`, and the component gallery remains available at `/_design`.
 
@@ -37,16 +59,18 @@ This is a **Zo Site** - a web application running on a user's Zo computer that c
 ├── vite.config.ts         # Vite configuration
 ├── package.json           # Dependencies and scripts
 ├── zosite.json            # Zo deployment config (ports, env vars)
-├── public/                # Static assets (favicon, reminder worker)
+├── public/                # Static assets (favicon, reminder worker, PWA manifest)
 │   ├── favicon.svg
+│   ├── manifest.webmanifest
 │   └── daymark-sw.js         # Reminder service worker (legacy path, kept)
+├── native/                # Android AlarmManager + iOS AlarmKit reference (not compiled here)
 ├── src/
 │   ├── main.tsx
 │   ├── App.tsx               # Router: Routa at /, demos at /data-demo and /_design
 │   ├── styles.css
 │   ├── pages/daymark.tsx     # Routa shell (DaymarkProvider + DaymarkScreen)
 │   ├── components/daymark/   # Landing, onboarding, today, routine, progress, settings, editor
-│   └── lib/daymark/          # Store, templates, storage/migration, reminders
+│   └── lib/daymark/          # Store, templates, storage, progress, insights, alarms
 └── backend-lib/
 ```
 
@@ -79,12 +103,13 @@ Install packages with `bun add`. Typecheck with `bunx tsc --noEmit`.
 
 ## Routa product notes for agents
 
-- Do not rebuild from scratch. Current V2 is the source of truth.
+- Do not rebuild from scratch. Current V4 + alarm architecture is the source of truth.
 - Keep the existing logo mark exactly (`DaymarkMark` in `src/lib/daymark/icons.tsx` and `public/favicon.svg`).
 - Keep technical identifiers (`DaymarkProvider`, `useDaymark`, `src/lib/daymark`, `/daymark-sw.js`) unless a migration requires a new key.
 - User-facing copy should say Routa, not Daymark.
-- Persistence keys: `routa:v2:{profile,routine,progress,notes,settings}` with legacy `daymark:v2:*` copy-forward.
-- Reminders are in-browser notifications while the page is open.
+- Persistence keys: `routa:v2:{profile,routine,progress,notes,settings,alarms}` with legacy `daymark:v2:*` copy-forward.
+- Web reminders are in-browser notifications while the page is open. Do not fake Clock alarms.
+- `scheduled` alarm status is native-only.
 - The Builder template has 13 checkpoints. Do not revert to the old 9-session dashboard.
 
 ## Scripts

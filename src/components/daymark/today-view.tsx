@@ -31,6 +31,7 @@ export function TodayView({
   const liveId = liveCheckpointId(routine?.checkpoints ?? [], now);
   const selected = list.find((item) => item.id === selectedId) ?? list.find((item) => item.id === liveId) ?? list[0];
   const remaining = Math.max(stats.todayTotal - stats.todayDone, 0);
+  const missed = stats.todayMissed;
   const slice = stats.todayTotal === 0 ? 0 : stats.todayDone * (360 / stats.todayTotal);
   const firstName = profile.name.trim().split(" ")[0];
   const hello = firstName ? `${greeting(now)}, ${firstName}.` : `${greeting(now)}.`;
@@ -82,7 +83,8 @@ export function TodayView({
                 <i className="text-lg font-normal text-mist"> / {stats.todayTotal}</i>
               </strong>
               <p className="mt-1 text-sm text-mist">
-                {remaining} checkpoint{remaining === 1 ? "" : "s"} remaining
+                {remaining} remaining
+                {missed > 0 ? ` · ${missed} missed` : ""}
               </p>
             </div>
           </div>
@@ -121,6 +123,12 @@ export function TodayView({
         </div>
       </div>
 
+      {stats.todayMissed > 0 ? (
+        <p className="mt-4 rounded-2xl bg-mist px-4 py-3 text-sm text-olive">
+          {stats.todayMissed} checkpoint{stats.todayMissed === 1 ? "" : "s"} already passed and still open.
+        </p>
+      ) : null}
+
       <div className="mt-4 space-y-2">
         {list.map((activity) => {
           const done = checkpointDone(activity.id);
@@ -145,6 +153,11 @@ export function TodayView({
                     {activity.id === liveId ? (
                       <span className="rounded-full bg-mist px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-olive">
                         now
+                      </span>
+                    ) : null}
+                    {stats.missedIds.includes(activity.id) && activity.id !== liveId ? (
+                      <span className="rounded-full bg-canvas px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-danger">
+                        missed
                       </span>
                     ) : null}
                     {activity.reminderEnabled && settings.remindersEnabled ? (
@@ -241,7 +254,9 @@ export function TodayView({
               {String(stats.streak).padStart(2, "0")}{" "}
               <small className="text-lg font-medium">day{stats.streak === 1 ? "" : "s"}</small>
             </strong>
-            <p className="mt-2 text-pretty text-sm leading-6 text-olive">Show up for the next session. Streaks count fully finished days.</p>
+            <p className="mt-2 text-pretty text-sm leading-6 text-olive">
+              A day counts when every scheduled checkpoint is finished. Best streak {String(stats.bestStreak).padStart(2, "0")}.
+            </p>
             <div className="mt-7 flex justify-between gap-2">
               {stats.weekDays.map((day) => (
                 <div className="flex flex-1 flex-col items-center gap-2" key={day.dateKey}>

@@ -15,7 +15,7 @@ export function Onboarding() {
   const [draftRoutine, setDraftRoutine] = useState<Routine | null>(null);
 
   const toggleFocus = (id: FocusAreaId) => {
-    setFocusAreas((current) => (current.includes(id) ? current.filter((item) => item.id !== id) : [...current, id]));
+    setFocusAreas((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
   };
 
   const goPreview = () => {
@@ -56,8 +56,13 @@ export function Onboarding() {
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-quiet">Welcome</p>
             <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-balance">Build a daily rhythm that fits your life.</h1>
             <p className="mt-4 text-pretty text-sm leading-6 text-quiet">
-              Plan checkpoints, get reminded at the right time, and see the day through. No one else's routine, yours.
+              Routa helps you plan checkpoints, follow them through the day, and see real progress. You can start from a template or from nothing.
             </p>
+            <ul className="mt-5 space-y-2 text-sm leading-6 text-quiet">
+              <li>Create your own routine, including times and tasks.</li>
+              <li>Optional reminders while Routa is open in this browser.</li>
+              <li>Progress stays on this device unless you export a backup.</li>
+            </ul>
             <label className="mt-8 text-xs font-bold text-quiet">
               What should we call you?
               <input
@@ -152,6 +157,9 @@ export function Onboarding() {
               {preview.length
                 ? "Remove anything that doesn't fit. You can edit times and tasks after you start."
                 : "Your routine is empty. Add your first checkpoint from the Routine tab."}
+            </p>
+            <p className="mt-2 text-sm text-quiet">
+              Reminders are optional. Your data stays on this device. Export a backup anytime from Settings.
             </p>
             <label className="mt-5 text-xs font-bold text-quiet">
               Routine name

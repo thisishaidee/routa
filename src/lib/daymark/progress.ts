@@ -1,5 +1,5 @@
 import type { Checkpoint, DayProgress, ProgressMap, Routine, Settings } from "./types";
-import { addDays, isoFromDate, mondayIndex, startOfWeek, todaysCheckpoints } from "./time";
+import { addDays, hasStartedInDay, isoFromDate, mondayIndex, startOfWeek, todaysCheckpoints } from "./time";
 
 export function isDone(day: DayProgress, checkpointId: string) {
   return day.completedCheckpointIds.includes(checkpointId);
@@ -29,12 +29,19 @@ export interface DaymarkStats {
   todayDone: number;
   todayTotal: number;
   todayPercent: number;
+  todayMissed: number;
+  todayRemaining: number;
+  todayTasksDone: number;
+  todayTasksTotal: number;
   weekDone: number;
   weekTotal: number;
   weekPercent: number;
   bestDayLabel: string;
   lifetimeDone: number;
   streak: number;
+  bestStreak: number;
+  completedDays: number;
+  missedIds: string[];
   weekDays: { dateKey: string; label: string; done: number; total: number }[];
   grid: CheckpointWeek[];
 }
@@ -47,15 +54,26 @@ export function emptyStats(): DaymarkStats {
     todayDone: 0,
     todayTotal: 0,
     todayPercent: 0,
+    todayMissed: 0,
+    todayRemaining: 0,
+    todayTasksDone: 0,
+    todayTasksTotal: 0,
     weekDone: 0,
     weekTotal: 0,
     weekPercent: 0,
     bestDayLabel: "—",
     lifetimeDone: 0,
     streak: 0,
+    bestStreak: 0,
+    completedDays: 0,
+    missedIds: [],
     weekDays: [],
     grid: [],
   };
+}
+
+function isDayComplete(list: Checkpoint[], day: DayProgress) {
+  return list.length > 0 && list.every((item) => isDone(day, item.id));
 }
 
 export function computeStats(
@@ -70,6 +88,17 @@ export function computeStats(
   const todayDay = progress[todayKeyValue] ?? { completedCheckpointIds: [], completedTaskIds: {} };
   const todayDone = todayList.filter((item) => isDone(todayDay, item.id)).length;
   const todayTotal = todayList.length;
+  const missedIds = todayList
+    .filter((item) => !isDone(todayDay, item.id) && hasStartedInDay(item.time, now))
+    .map((item) => item.id);
+  const todayRemaining = todayTotal - todayDone;
+  let todayTasksDone = 0;
+  let todayTasksTotal = 0;
+  for (const item of todayList) {
+    todayTasksTotal += item.tasks.length;
+    todayTasksDone += item.tasks.filter((task) => isTaskDone(todayDay, item.id, task.id)).length;
+  }
+
   const start = startOfWeek(now, settings.weekStartsOn);
   const weekDays: DaymarkStats["weekDays"] = [];
   let weekDone = 0;
@@ -122,6 +151,27 @@ export function computeStats(
   }
 
   let streak = 0;
+  let bestStreak = 0;
+  let run = 0;
+  let completedDays = 0;
+  for (let offset = 0; offset < 365; offset += 1) {
+    const date = addDays(now, -offset);
+    const list = todaysCheckpoints(routine.checkpoints, date);
+    if (list.length === 0) {
+      run = 0;
+      continue;
+    }
+    const key = isoFromDate(date);
+    const map = progress[key] ?? { completedCheckpointIds: [], completedTaskIds: {} };
+    if (isDayComplete(list, map)) {
+      completedDays += 1;
+      run += 1;
+      if (run > bestStreak) bestStreak = run;
+    } else {
+      run = 0;
+    }
+  }
+
   for (let offset = 0; offset < 365; offset += 1) {
     const date = addDays(now, -offset);
     const list = todaysCheckpoints(routine.checkpoints, date);
@@ -131,21 +181,29 @@ export function computeStats(
     }
     const key = isoFromDate(date);
     const map = progress[key] ?? { completedCheckpointIds: [], completedTaskIds: {} };
-    const complete = list.every((item) => isDone(map, item.id));
-    if (!complete) break;
+    if (!isDayComplete(list, map)) break;
     streak += 1;
   }
+
+  if (streak > bestStreak) bestStreak = streak;
 
   return {
     todayDone,
     todayTotal,
     todayPercent: todayTotal === 0 ? 0 : Math.round((todayDone / todayTotal) * 100),
+    todayMissed: missedIds.length,
+    todayRemaining,
+    todayTasksDone,
+    todayTasksTotal,
     weekDone,
     weekTotal,
     weekPercent: weekTotal === 0 ? 0 : Math.round((weekDone / weekTotal) * 100),
     bestDayLabel,
     lifetimeDone,
     streak,
+    bestStreak,
+    completedDays,
+    missedIds,
     weekDays,
     grid,
   };

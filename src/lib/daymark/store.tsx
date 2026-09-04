@@ -1,9 +1,18 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { snapshotToJson, parseBackup } from "./backup";
+import { computeHealth, computeInsights, computeSuggestions } from "./insights";
 import { createId } from "./ids";
 import { migrateV1IfNeeded } from "./migration";
-import { registerReminderWorker, reminderPermission, requestReminderPermission, tickReminders } from "./notifications";
+import {
+  getAlarmScheduler,
+  registerReminderWorker,
+  reminderPermission,
+  tickReminders,
+} from "./notifications";
+import type { PlatformCapabilities } from "./alarms";
 import { computeStats, isDone, isTaskDone, toggleId } from "./progress";
 import {
+  applySnapshot,
   clearSessionEntered,
   clearV2Storage,
   dayProgress,
@@ -21,7 +30,9 @@ import { emptyRoutine } from "./templates";
 import {
   DEFAULT_PROFILE,
   DEFAULT_SETTINGS,
+  type AlarmStatus,
   type Checkpoint,
+  type DaymarkSnapshot,
   type NotesMap,
   type Profile,
   type ProgressMap,
@@ -29,7 +40,7 @@ import {
   type Routine,
   type Settings,
 } from "./types";
-import { normalizeTime, todayKey as dateKey } from "./time";
+import { normalizeTime, todayKey as dateKey, deviceTimeZone } from "./time";
 
 interface DaymarkContextValue {
   ready: boolean;
@@ -42,12 +53,18 @@ interface DaymarkContextValue {
   settings: Settings;
   permission: ReminderPermission;
   note: string;
+  notes: NotesMap;
   selectedId: string | null;
   setSelectedId: (id: string | null) => void;
   stats: ReturnType<typeof computeStats>;
+  insights: ReturnType<typeof computeInsights>;
+  suggestions: ReturnType<typeof computeSuggestions>;
+  health: ReturnType<typeof computeHealth>;
+  alarmStatus: (checkpoint: Checkpoint) => AlarmStatus;
+  capabilities: PlatformCapabilities;
   updateProfile: (patch: Partial<Profile>) => void;
   completeOnboarding: (profile: Profile, routine: Routine) => void;
-  updateRoutineMeta: (patch: Pick<Routine, "name">) => void;
+  updateRoutineMeta: (patch: Partial<Pick<Routine, "name" | "description" | "active">>) => void;
   saveCheckpoint: (checkpoint: Checkpoint, options?: { insert?: boolean }) => string;
   deleteCheckpoint: (id: string) => void;
   moveCheckpoint: (id: string, direction: -1 | 1) => void;
@@ -65,6 +82,8 @@ interface DaymarkContextValue {
   resetProgress: () => void;
   resetRoutine: () => void;
   clearAllData: () => void;
+  exportBackup: () => string;
+  importBackup: (raw: string) => { ok: boolean; error?: string };
 }
 
 const DaymarkContext = createContext<DaymarkContextValue | null>(null);
@@ -83,6 +102,15 @@ function sanitizeCheckpoint(checkpoint: Checkpoint): Checkpoint {
   };
 }
 
+function hydrateRoutine(routine: Routine | null): Routine | null {
+  if (!routine) return null;
+  return {
+    ...routine,
+    active: routine.active !== false,
+    description: routine.description?.trim() || undefined,
+  };
+}
+
 export function DaymarkProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [entered, setEntered] = useState(false);
@@ -96,8 +124,12 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const today = dateKey(now);
+  const timeZone = deviceTimeZone();
   const todayProgress = dayProgress(progress, today);
   const stats = computeStats(routine, progress, now, settings);
+  const insights = useMemo(() => computeInsights(routine, progress, now), [routine, progress, now]);
+  const suggestions = useMemo(() => computeSuggestions(routine, progress, now), [routine, progress, now]);
+  const health = useMemo(() => computeHealth(routine, progress, now), [routine, progress, now]);
 
   useEffect(() => {
     try {
@@ -105,7 +137,7 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
       migrateLegacyV2IfNeeded();
       const snapshot = loadSnapshot();
       setProfile(snapshot.profile);
-      setRoutine(snapshot.routine);
+      setRoutine(hydrateRoutine(snapshot.routine));
       setProgress(snapshot.progress);
       setNotes(snapshot.notes);
       setSettings(snapshot.settings);
@@ -120,7 +152,14 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const tick = window.setInterval(() => setNow(new Date()), 15000);
-    return () => window.clearInterval(tick);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") setNow(new Date());
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(tick);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
 
   useEffect(() => {
@@ -150,12 +189,53 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!ready || !routine) return;
-    tickReminders({ checkpoints: routine.checkpoints, settings });
+    if (getAlarmScheduler().canExactAlarm()) return;
+    tickReminders({ checkpoints: routine.checkpoints, settings, permission });
     const tick = window.setInterval(() => {
-      tickReminders({ checkpoints: routine.checkpoints, settings });
+      tickReminders({ checkpoints: routine.checkpoints, settings, permission });
     }, 15000);
-    return () => window.clearInterval(tick);
-  }, [ready, routine, settings]);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        tickReminders({ checkpoints: routine.checkpoints, settings, permission });
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(tick);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [ready, routine, settings, permission]);
+
+  useEffect(() => {
+    if (!ready || !routine) return;
+    void getAlarmScheduler().sync(routine.checkpoints, settings, routine.id);
+  }, [ready, routine, settings, permission, timeZone]);
+
+  useEffect(() => {
+    if (!ready) return;
+    const refreshPermission = () => {
+      const next = reminderPermission();
+      setPermission((current) => (current === next ? current : next));
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refreshPermission();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    let permissionStatus: PermissionStatus | null = null;
+    if (typeof navigator !== "undefined" && navigator.permissions?.query) {
+      void navigator.permissions
+        .query({ name: "notifications" as PermissionName })
+        .then((status) => {
+          permissionStatus = status;
+          status.onchange = refreshPermission;
+        })
+        .catch(() => undefined);
+    }
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      if (permissionStatus) permissionStatus.onchange = null;
+    };
+  }, [ready]);
 
   const enterApp = () => {
     writeSessionEntered();
@@ -168,7 +248,7 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
 
   const completeOnboarding = (nextProfile: Profile, nextRoutine: Routine) => {
     setProfile({ ...nextProfile, onboarded: true });
-    setRoutine(nextRoutine);
+    setRoutine(hydrateRoutine(nextRoutine));
   };
 
   const touchRoutine = (mutate: (current: Routine) => Routine) => {
@@ -178,8 +258,8 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const updateRoutineMeta = (patch: Pick<Routine, "name">) => {
-    touchRoutine((current) => ({ ...current, name: patch.name }));
+  const updateRoutineMeta = (patch: Partial<Pick<Routine, "name" | "description" | "active">>) => {
+    touchRoutine((current) => ({ ...current, ...patch }));
   };
 
   const saveCheckpoint = (checkpoint: Checkpoint, options?: { insert?: boolean }) => {
@@ -269,7 +349,8 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
   };
 
   const requestReminders = async () => {
-    const next = await requestReminderPermission();
+    if (permission === "denied" || permission === "unsupported") return permission;
+    const next = await getAlarmScheduler().requestPermission();
     setPermission(next);
     if (next === "granted") updateSettings({ remindersEnabled: true });
     return next;
@@ -303,6 +384,7 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
   };
 
   const clearAllData = () => {
+    void getAlarmScheduler().cancelAll();
     clearV2Storage();
     clearSessionEntered();
     setProfile(DEFAULT_PROFILE);
@@ -313,6 +395,32 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
     setSelectedId(null);
     setEntered(false);
   };
+
+  const currentSnapshot = (): DaymarkSnapshot => ({
+    profile,
+    routine,
+    progress,
+    notes,
+    settings,
+  });
+
+  const exportBackup = () => snapshotToJson(currentSnapshot());
+
+  const importBackup = (raw: string) => {
+    const parsed = parseBackup(raw);
+    if (!parsed.ok) return parsed;
+    applySnapshot(parsed.snapshot);
+    setProfile(parsed.snapshot.profile);
+    setRoutine(hydrateRoutine(parsed.snapshot.routine));
+    setProgress(parsed.snapshot.progress);
+    setNotes(parsed.snapshot.notes);
+    setSettings(parsed.snapshot.settings);
+    setSelectedId(null);
+    return { ok: true };
+  };
+
+  const alarmStatusFor = (checkpoint: Checkpoint): AlarmStatus =>
+    getAlarmScheduler().status(checkpoint, settings, permission);
 
   const value: DaymarkContextValue = {
     ready,
@@ -325,9 +433,15 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
     settings,
     permission,
     note: notes[today] ?? "",
+    notes,
     selectedId,
     setSelectedId,
     stats,
+    insights,
+    suggestions,
+    health,
+    alarmStatus: alarmStatusFor,
+    capabilities: getAlarmScheduler().getPlatformCapabilities(),
     updateProfile,
     completeOnboarding,
     updateRoutineMeta,
@@ -348,6 +462,8 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
     resetProgress,
     resetRoutine,
     clearAllData,
+    exportBackup,
+    importBackup,
   };
 
   return <DaymarkContext.Provider value={value}>{children}</DaymarkContext.Provider>;

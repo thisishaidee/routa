@@ -1,20 +1,23 @@
 import type { Checkpoint, ReminderPermission, Settings } from "./types";
-import { mondayIndex, pad, todayKey } from "./time";
+import {
+  alreadyFired,
+  dueNow,
+  getAlarmScheduler,
+  markFired,
+  reminderPermission,
+  requestReminderPermission,
+} from "./alarms";
 
-export function reminderPermission(): ReminderPermission {
-  if (typeof window === "undefined" || !("Notification" in window)) return "unsupported";
-  return Notification.permission;
-}
-
-export async function requestReminderPermission(): Promise<ReminderPermission> {
-  if (typeof window === "undefined" || !("Notification" in window)) return "unsupported";
-  try {
-    await Notification.requestPermission();
-  } catch {
-    return reminderPermission();
-  }
-  return reminderPermission();
-}
+export { reminderPermission, requestReminderPermission } from "./alarms";
+export {
+  alarmStatusLabel,
+  getAlarmScheduler,
+  isStandaloneDisplay,
+  pushSupport,
+  reminderUxCopy,
+  deniedRecoveryCopy,
+} from "./alarms";
+export type { AlarmScheduler, PlatformCapabilities, SyncResult } from "./alarms";
 
 export async function registerReminderWorker() {
   if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
@@ -25,57 +28,52 @@ export async function registerReminderWorker() {
   }
 }
 
-function alarmKey(date: Date, checkpointId: string) {
-  return `routa:v2:alarm:${todayKey(date)}:${checkpointId}`;
-}
-
-function legacyAlarmKey(date: Date, checkpointId: string) {
-  return `daymark:v2:alarm:${todayKey(date)}:${checkpointId}`;
-}
-
-function alreadyFired(key: string, legacy: string) {
-  try {
-    return sessionStorage.getItem(key) === "1" || sessionStorage.getItem(legacy) === "1";
-  } catch {
-    return false;
-  }
-}
-
-function markFired(key: string) {
-  try {
-    sessionStorage.setItem(key, "1");
-  } catch {
-    /* ignore */
-  }
-}
-
 export interface ReminderTick {
   checkpoints: Checkpoint[];
   settings: Settings;
+  permission?: ReminderPermission;
   onFire?: (checkpoint: Checkpoint) => void;
 }
 
 export function tickReminders(input: ReminderTick, date = new Date()) {
-  if (!input.settings.remindersEnabled) return;
-  if (reminderPermission() !== "granted") return;
-  const stamp = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
-  const day = mondayIndex(date);
-  for (const checkpoint of input.checkpoints) {
-    if (!checkpoint.enabled || !checkpoint.reminderEnabled) continue;
-    if (!checkpoint.repeatDays.includes(day)) continue;
-    if (checkpoint.time !== stamp) continue;
-    const key = alarmKey(date, checkpoint.id);
-    if (alreadyFired(key, legacyAlarmKey(date, checkpoint.id))) continue;
-    markFired(key);
+  if (getAlarmScheduler().canExactAlarm()) return;
+  const permission = input.permission ?? reminderPermission();
+  const due = dueNow({
+    checkpoints: input.checkpoints,
+    settings: input.settings,
+    at: date,
+    permission,
+  });
+  for (const item of due) {
+    if (alreadyFired(date, item.checkpoint.id)) continue;
+    markFired(date, item.checkpoint.id);
     try {
-      new Notification(`Routa · ${checkpoint.title}`, {
-        body: `Time for ${checkpoint.title}.`,
-        tag: key,
-      });
+      if (typeof Notification === "undefined") return;
+      const worker = typeof navigator !== "undefined" ? navigator.serviceWorker?.controller : null;
+      if (worker) {
+        worker.postMessage({
+          type: "routa-notify",
+          title: `Routa · ${item.checkpoint.title}`,
+          body: `Time for ${item.checkpoint.title}.`,
+          tag: item.key,
+        });
+      } else {
+        new Notification(`Routa · ${item.checkpoint.title}`, {
+          body: `Time for ${item.checkpoint.title}.`,
+          tag: item.key,
+        });
+      }
     } catch {
-      /* ignore */
+      try {
+        new Notification(`Routa · ${item.checkpoint.title}`, {
+          body: `Time for ${item.checkpoint.title}.`,
+          tag: item.key,
+        });
+      } catch {
+        /* ignore */
+      }
     }
-    input.onFire?.(checkpoint);
+    input.onFire?.(item.checkpoint);
   }
 }
 
@@ -83,10 +81,14 @@ export const notificationService = {
   permission: reminderPermission,
   requestPermission: requestReminderPermission,
   registerWorker: registerReminderWorker,
-  scheduleReminder() {
-    // Web MVP: reminders are evaluated from the live routine on each tick.
-    // Native wrappers can replace this method with OS local notifications.
+  async scheduleReminder() {
+    return getAlarmScheduler().sync([], { weekStartsOn: 1, remindersEnabled: false });
   },
-  cancelReminder() {},
-  updateReminder() {},
+  cancelReminder() {
+    return getAlarmScheduler().cancelAll();
+  },
+  updateReminder() {
+    return getAlarmScheduler().rescheduleAll([]);
+  },
+  scheduler: getAlarmScheduler(),
 };

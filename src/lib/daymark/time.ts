@@ -4,6 +4,7 @@ export function pad(value: number) {
   return String(value).padStart(2, "0");
 }
 
+/** Local calendar key. Never uses UTC, so DST and timezone changes stay on-device. */
 export function todayKey(date = new Date()) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
@@ -55,14 +56,14 @@ export function greeting(date = new Date()) {
   return "Good night";
 }
 
+/** Night-build wrap: times before 05:00 sort after evening. */
+export function wrapMinutes(hhmmOrMinutes: string | number) {
+  const minutes = typeof hhmmOrMinutes === "number" ? hhmmOrMinutes : sessionMinutes(hhmmOrMinutes);
+  return minutes < 5 * 60 ? minutes + 24 * 60 : minutes;
+}
+
 export function sortCheckpoints(checkpoints: Checkpoint[]) {
-  return [...checkpoints].sort((a, b) => {
-    const aMin = sessionMinutes(a.time);
-    const bMin = sessionMinutes(b.time);
-    const aWrap = aMin < 5 * 60 ? aMin + 24 * 60 : aMin;
-    const bWrap = bMin < 5 * 60 ? bMin + 24 * 60 : bMin;
-    return aWrap - bWrap;
-  });
+  return [...checkpoints].sort((a, b) => wrapMinutes(a.time) - wrapMinutes(b.time));
 }
 
 export function todaysCheckpoints(checkpoints: Checkpoint[], date = new Date()) {
@@ -83,6 +84,44 @@ export function liveCheckpointId(checkpoints: Checkpoint[], date = new Date()) {
     if (start <= now) current = item.id;
   }
   return current;
+}
+
+/** True once this checkpoint's local time has been reached in the current rhythm day. */
+export function hasStartedInDay(time: string, now = new Date()) {
+  return wrapMinutes(clockMinutes(now)) >= wrapMinutes(time);
+}
+
+export function localDateAt(date: Date, hhmm: string) {
+  const normalized = normalizeTime(hhmm);
+  const [hours, minutes] = normalized.split(":").map(Number);
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    Number.isFinite(hours) ? hours : 0,
+    Number.isFinite(minutes) ? minutes : 0,
+    0,
+    0,
+  );
+}
+
+export function nextOccurrence(checkpoint: Checkpoint, now = new Date()): Date | null {
+  if (!checkpoint.enabled) return null;
+  for (let offset = 0; offset < 8; offset += 1) {
+    const date = addDays(now, offset);
+    if (!checkpoint.repeatDays.includes(mondayIndex(date))) continue;
+    const fire = localDateAt(date, checkpoint.time);
+    if (fire.getTime() > now.getTime()) return fire;
+  }
+  return null;
+}
+
+export function deviceTimeZone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "local";
+  } catch {
+    return "local";
+  }
 }
 
 export function startOfWeek(date: Date, weekStartsOn: 0 | 1) {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Trash2, X } from "lucide-react";
 import { CHECKPOINT_ICONS } from "@/lib/daymark/icons";
 import { createId } from "@/lib/daymark/ids";
 import { isValidTime, normalizeTime } from "@/lib/daymark/time";
@@ -32,6 +32,17 @@ export function CheckpointEditor({ initial, onSave, onClose, onDelete }: Props) 
       const has = value.repeatDays.includes(day);
       const repeatDays = has ? value.repeatDays.filter((item) => item !== day) : [...value.repeatDays, day];
       return { ...value, repeatDays: repeatDays.length ? repeatDays : [...ALL_DAYS] };
+    });
+  };
+
+  const moveTask = (index: number, direction: -1 | 1) => {
+    setDraft((value) => {
+      const next = index + direction;
+      if (next < 0 || next >= value.tasks.length) return value;
+      const tasks = [...value.tasks];
+      const [item] = tasks.splice(index, 1);
+      tasks.splice(next, 0, item);
+      return { ...value, tasks };
     });
   };
 
@@ -121,6 +132,24 @@ export function CheckpointEditor({ initial, onSave, onClose, onDelete }: Props) 
                     placeholder="Improvement task"
                     className="h-12 flex-1 rounded-xl border border-line bg-canvas px-3 text-sm outline-none focus:border-lime"
                   />
+                  <button
+                    type="button"
+                    aria-label="Move task up"
+                    disabled={index === 0}
+                    onClick={() => moveTask(index, -1)}
+                    className="grid size-12 place-items-center rounded-xl border border-line text-quiet disabled:opacity-30"
+                  >
+                    <ChevronUp size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Move task down"
+                    disabled={index === draft.tasks.length - 1}
+                    onClick={() => moveTask(index, 1)}
+                    className="grid size-12 place-items-center rounded-xl border border-line text-quiet disabled:opacity-30"
+                  >
+                    <ChevronDown size={16} />
+                  </button>
                   <button
                     type="button"
                     aria-label="Remove task"

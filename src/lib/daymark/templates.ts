@@ -35,6 +35,7 @@ function routine(name: string, templateId: string, drafts: Draft[]): Routine {
   return {
     id: createId("rt"),
     name,
+    active: true,
     checkpoints: drafts.map(checkpoint),
     createdAt,
     updatedAt: createdAt,
