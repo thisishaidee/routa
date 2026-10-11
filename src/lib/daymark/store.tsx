@@ -12,6 +12,19 @@ import {
 import type { PlatformCapabilities } from "./alarms";
 import { computeStats, isDone, isTaskDone, toggleId } from "./progress";
 import {
+  dropDayMove,
+  EMPTY_RECOVERY,
+  loadRecovery,
+  optionStillFree,
+  saveRecovery,
+  suggestRecovery,
+  timeOverrides,
+  upsertDayMove,
+  withDayTimes,
+  type RecoveryOption,
+  type RecoveryState,
+} from "./recovery";
+import {
   applySnapshot,
   clearSessionEntered,
   clearV2Storage,
@@ -84,6 +97,10 @@ interface DaymarkContextValue {
   clearAllData: () => void;
   exportBackup: () => string;
   importBackup: (raw: string) => { ok: boolean; error?: string };
+  recoveryProposals: ReturnType<typeof suggestRecovery>;
+  acceptRecovery: (option: RecoveryOption) => boolean;
+  dismissRecovery: (checkpointId: string) => void;
+  todayCheckpoints: Checkpoint[];
 }
 
 const DaymarkContext = createContext<DaymarkContextValue | null>(null);
@@ -122,11 +139,31 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [permission, setPermission] = useState<ReminderPermission>("default");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [recovery, setRecovery] = useState<RecoveryState>(EMPTY_RECOVERY);
 
   const today = dateKey(now);
   const timeZone = deviceTimeZone();
   const todayProgress = dayProgress(progress, today);
-  const stats = computeStats(routine, progress, now, settings);
+  const todayOverrides = useMemo(
+    () => timeOverrides(recovery.moves, today, routine?.id),
+    [recovery.moves, today, routine?.id],
+  );
+  const todayCheckpoints = useMemo(
+    () => withDayTimes(routine?.checkpoints ?? [], todayOverrides),
+    [routine, todayOverrides],
+  );
+  const stats = computeStats(routine, progress, now, settings, todayOverrides);
+  const recoveryProposals = routine
+    ? suggestRecovery({
+        routineId: routine.id,
+        checkpoints: routine.checkpoints,
+        day: todayProgress,
+        now,
+        date: today,
+        moves: recovery.moves,
+        dismissedIds: recovery.dismissed.filter((item) => item.date === today).map((item) => item.checkpointId),
+      })
+    : [];
   const insights = useMemo(() => computeInsights(routine, progress, now), [routine, progress, now]);
   const suggestions = useMemo(() => computeSuggestions(routine, progress, now), [routine, progress, now]);
   const health = useMemo(() => computeHealth(routine, progress, now), [routine, progress, now]);
@@ -141,6 +178,7 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
       setProgress(snapshot.progress);
       setNotes(snapshot.notes);
       setSettings(snapshot.settings);
+      setRecovery(loadRecovery());
       setPermission(reminderPermission());
       void registerReminderWorker();
       if (readSessionEntered()) setEntered(true);
@@ -188,23 +226,25 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
   }, [settings, ready]);
 
   useEffect(() => {
+    if (!ready) return;
+    saveRecovery(recovery);
+  }, [recovery, ready]);
+
+  useEffect(() => {
     if (!ready || !routine) return;
     if (getAlarmScheduler().canExactAlarm()) return;
-    tickReminders({ checkpoints: routine.checkpoints, settings, permission });
-    const tick = window.setInterval(() => {
-      tickReminders({ checkpoints: routine.checkpoints, settings, permission });
-    }, 15000);
+    const fire = () => tickReminders({ checkpoints: todayCheckpoints, settings, permission });
+    fire();
+    const tick = window.setInterval(fire, 15000);
     const onVisible = () => {
-      if (document.visibilityState === "visible") {
-        tickReminders({ checkpoints: routine.checkpoints, settings, permission });
-      }
+      if (document.visibilityState === "visible") fire();
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       window.clearInterval(tick);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [ready, routine, settings, permission]);
+  }, [ready, routine, todayCheckpoints, settings, permission]);
 
   useEffect(() => {
     if (!ready || !routine) return;
@@ -392,6 +432,7 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
     setProgress({});
     setNotes({});
     setSettings(DEFAULT_SETTINGS);
+    setRecovery(EMPTY_RECOVERY);
     setSelectedId(null);
     setEntered(false);
   };
@@ -417,6 +458,39 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
     setSettings(parsed.snapshot.settings);
     setSelectedId(null);
     return { ok: true };
+  };
+
+  const acceptRecovery = (option: RecoveryOption) => {
+    if (!routine) return false;
+    const overrides = timeOverrides(recovery.moves, today, routine.id);
+    if (!optionStillFree(option, routine.checkpoints, now, overrides)) return false;
+    if (option.scope === "today") {
+      setRecovery((current) => ({
+        ...current,
+        moves: upsertDayMove(current.moves, {
+          routineId: routine.id,
+          date: today,
+          checkpointId: option.checkpointId,
+          fromTime: option.fromTime,
+          time: option.time,
+          createdAt: new Date().toISOString(),
+        }),
+      }));
+      return true;
+    }
+    patchCheckpoint(option.checkpointId, { time: option.time });
+    setRecovery((current) => ({
+      ...current,
+      moves: dropDayMove(current.moves, today, option.checkpointId),
+    }));
+    return true;
+  };
+
+  const dismissRecovery = (checkpointId: string) => {
+    setRecovery((current) => {
+      if (current.dismissed.some((item) => item.date === today && item.checkpointId === checkpointId)) return current;
+      return { ...current, dismissed: [...current.dismissed, { date: today, checkpointId }] };
+    });
   };
 
   const alarmStatusFor = (checkpoint: Checkpoint): AlarmStatus =>
@@ -464,6 +538,10 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
     clearAllData,
     exportBackup,
     importBackup,
+    recoveryProposals,
+    acceptRecovery,
+    dismissRecovery,
+    todayCheckpoints,
   };
 
   return <DaymarkContext.Provider value={value}>{children}</DaymarkContext.Provider>;

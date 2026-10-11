@@ -15,6 +15,7 @@ The lime incomplete-circle mark is unchanged. Only the wordmark and product name
 - JSON backup export/import (`app: "routa"`, snapshot version 4)
 - PWA manifest for install; reminders still need the app open on web
 - Local persistence on the current device. No accounts. No cloud.
+- Missed sessions: Today offers a few choices (move only today, change the usual time, or leave it). Nothing moves until you pick. A today-only move is stored in `routa:v2:recovery` and does not rewrite the repeating checkpoint or past days.
 
 ### Reminders / alarms (honest)
 

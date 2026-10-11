@@ -314,6 +314,7 @@ export function clearV2Storage() {
     "daymark-tasks",
     "daymark-alarms",
     "routa:v2:alarms",
+    "routa:v2:recovery",
   ];
   for (const key of [...Object.values(STORAGE_KEYS), ...extra]) {
     try {

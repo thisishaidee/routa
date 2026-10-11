@@ -25,10 +25,14 @@ export function TodayView({
     note,
     setNote,
     settings,
+    recoveryProposals,
+    acceptRecovery,
+    dismissRecovery,
+    todayCheckpoints,
   } = useDaymark();
 
-  const list = todaysCheckpoints(routine?.checkpoints ?? [], now);
-  const liveId = liveCheckpointId(routine?.checkpoints ?? [], now);
+  const list = todaysCheckpoints(todayCheckpoints, now);
+  const liveId = liveCheckpointId(todayCheckpoints, now);
   const selected = list.find((item) => item.id === selectedId) ?? list.find((item) => item.id === liveId) ?? list[0];
   const remaining = Math.max(stats.todayTotal - stats.todayDone, 0);
   const missed = stats.todayMissed;
@@ -123,7 +127,32 @@ export function TodayView({
         </div>
       </div>
 
-      {stats.todayMissed > 0 ? (
+      {recoveryProposals.map((proposal) => (
+        <div key={proposal.checkpointId} className="mt-4 rounded-2xl bg-mist px-4 py-4">
+          <p className="text-sm leading-6 text-olive">{proposal.message}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {proposal.options.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => acceptRecovery(option)}
+                className="min-h-11 rounded-xl bg-forest px-3 text-xs font-bold text-paper"
+              >
+                {option.label}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => dismissRecovery(proposal.checkpointId)}
+              className="min-h-11 rounded-xl border border-line bg-paper px-3 text-xs font-bold text-forest"
+            >
+              Leave it
+            </button>
+          </div>
+        </div>
+      ))}
+
+      {stats.todayMissed > 0 && recoveryProposals.length === 0 ? (
         <p className="mt-4 rounded-2xl bg-mist px-4 py-3 text-sm text-olive">
           {stats.todayMissed} checkpoint{stats.todayMissed === 1 ? "" : "s"} already passed and still open.
         </p>

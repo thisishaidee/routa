@@ -81,9 +81,13 @@ export function computeStats(
   progress: ProgressMap,
   now: Date,
   settings: Settings,
+  todayOverrides: Record<string, string> = {},
 ): DaymarkStats {
   if (!routine) return emptyStats();
-  const todayList = todaysCheckpoints(routine.checkpoints, now);
+  const todayList = todaysCheckpoints(
+    routine.checkpoints.map((item) => (todayOverrides[item.id] ? { ...item, time: todayOverrides[item.id] } : item)),
+    now,
+  );
   const todayKeyValue = isoFromDate(now);
   const todayDay = progress[todayKeyValue] ?? { completedCheckpointIds: [], completedTaskIds: {} };
   const todayDone = todayList.filter((item) => isDone(todayDay, item.id)).length;
