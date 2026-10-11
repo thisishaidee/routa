@@ -3,6 +3,53 @@ import { CheckpointIcon } from "@/lib/daymark/icons";
 import { useDaymark } from "@/lib/daymark/store";
 import { clockLabel, greeting, liveCheckpointId, todaysCheckpoints } from "@/lib/daymark/time";
 import type { DaymarkView } from "./nav";
+import { BADGES } from "@/lib/daymark/checkins";
+
+function CheckInCard() {
+  const { todayCheckIn, checkInStreak, badges, today, startCheckIn, closeCheckIn } = useDaymark();
+  const started = Boolean(todayCheckIn?.startedAt);
+  const closed = Boolean(todayCheckIn?.closedAt);
+  const earnedToday = badges.filter((item) => item.earnedOn === today);
+
+  return (
+    <div className="mt-6 rounded-3xl border border-line bg-paper p-5">
+      <p className="text-[10px] font-black tracking-[0.18em] text-soft">CHECK-IN</p>
+      <p className="mt-2 text-sm leading-6 text-quiet">
+        Separate from finishing checkpoints. Check-in streak {checkInStreak.current}
+        {checkInStreak.best > 0 ? ` · best ${checkInStreak.best}` : ""}.
+      </p>
+      {started && closed ? (
+        <p className="mt-3 text-sm font-bold">Checked in today.</p>
+      ) : (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {started ? <p className="w-full text-sm font-bold">Day started.</p> : null}
+          {!started ? (
+            <button type="button" onClick={startCheckIn} className="h-11 rounded-xl bg-forest px-4 text-xs font-bold text-paper">
+              Start the day
+            </button>
+          ) : null}
+          {!closed ? (
+            <button type="button" onClick={closeCheckIn} className="h-11 rounded-xl border border-line bg-paper px-4 text-xs font-bold">
+              Close the day
+            </button>
+          ) : null}
+        </div>
+      )}
+      {earnedToday.length > 0 ? (
+        <ul className="mt-3 space-y-1">
+          {earnedToday.map((item) => {
+            const copy = BADGES.find((badge) => badge.id === item.id);
+            return (
+              <li key={item.id} className="text-sm text-olive">
+                Earned {copy?.title ?? item.id}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
 
 export function TodayView({
   onNavigate,
@@ -48,6 +95,7 @@ export function TodayView({
           {dateLabel} <span className="text-lime">●</span> Your daily rhythm
         </p>
         <h1 className="text-3xl font-black tracking-[-0.04em] sm:text-5xl">{hello}</h1>
+        <CheckInCard />
         <div className="mt-10 rounded-3xl border border-line bg-paper p-8">
           <h2 className="text-2xl font-black">Your rhythm starts here.</h2>
           <p className="mt-2 max-w-md text-pretty text-sm leading-6 text-quiet">
@@ -72,6 +120,7 @@ export function TodayView({
           {dateLabel} <span className="text-lime">●</span> Your daily rhythm
         </p>
         <h1 className="text-3xl font-black tracking-[-0.04em] text-balance sm:text-5xl">{hello}</h1>
+        <CheckInCard />
       </header>
 
       <div className="mt-9 grid gap-4 md:grid-cols-[1.1fr_0.9fr]">

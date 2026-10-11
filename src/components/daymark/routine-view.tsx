@@ -3,6 +3,7 @@ import { CheckpointIcon } from "@/lib/daymark/icons";
 import { useDaymark } from "@/lib/daymark/store";
 import { clockLabel } from "@/lib/daymark/time";
 import type { DaymarkView } from "./nav";
+import { RoutineBuilder } from "./routine-builder";
 
 const DAYS = ["M", "T", "W", "T", "F", "S", "S"];
 
@@ -30,6 +31,8 @@ export function RoutineView({
           className="mt-2 h-12 w-full max-w-md rounded-2xl border border-line bg-paper px-4 text-sm font-bold outline-none focus:border-lime"
         />
       </label>
+
+      <RoutineBuilder />
 
       {checkpoints.length === 0 ? (
         <div className="mt-8 rounded-3xl border border-line bg-paper p-8">

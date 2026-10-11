@@ -12,6 +12,19 @@ import {
 import type { PlatformCapabilities } from "./alarms";
 import { computeStats, isDone, isTaskDone, toggleId } from "./progress";
 import {
+  checkInStreak,
+  EMPTY_CHECKINS,
+  loadCheckIns,
+  markCheckIn,
+  recentCheckIns,
+  saveCheckIns,
+  syncBadges,
+  type CheckInRecord,
+  type CheckInState,
+  type EarnedBadge,
+} from "./checkins";
+import type { DraftCheckpoint } from "./planner";
+import {
   dropDayMove,
   EMPTY_RECOVERY,
   loadRecovery,
@@ -43,6 +56,7 @@ import { emptyRoutine } from "./templates";
 import {
   DEFAULT_PROFILE,
   DEFAULT_SETTINGS,
+  ALL_DAYS,
   type AlarmStatus,
   type Checkpoint,
   type DaymarkSnapshot,
@@ -53,7 +67,7 @@ import {
   type Routine,
   type Settings,
 } from "./types";
-import { normalizeTime, todayKey as dateKey, deviceTimeZone } from "./time";
+import { isValidTime, normalizeTime, todayKey as dateKey, deviceTimeZone } from "./time";
 
 interface DaymarkContextValue {
   ready: boolean;
@@ -101,6 +115,13 @@ interface DaymarkContextValue {
   acceptRecovery: (option: RecoveryOption) => boolean;
   dismissRecovery: (checkpointId: string) => void;
   todayCheckpoints: Checkpoint[];
+  todayCheckIn: CheckInRecord | null;
+  checkInStreak: { current: number; best: number; total: number };
+  badges: EarnedBadge[];
+  checkInHistory: CheckInRecord[];
+  startCheckIn: () => void;
+  closeCheckIn: () => void;
+  applyPlanner: (proposed: DraftCheckpoint[], reminders: boolean) => Promise<{ ok: boolean; reminders?: "on" | "off" | "denied"; error?: string }>;
 }
 
 const DaymarkContext = createContext<DaymarkContextValue | null>(null);
@@ -140,6 +161,7 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
   const [permission, setPermission] = useState<ReminderPermission>("default");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [recovery, setRecovery] = useState<RecoveryState>(EMPTY_RECOVERY);
+  const [journal, setJournal] = useState<CheckInState>(EMPTY_CHECKINS);
 
   const today = dateKey(now);
   const timeZone = deviceTimeZone();
@@ -167,6 +189,9 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
   const insights = useMemo(() => computeInsights(routine, progress, now), [routine, progress, now]);
   const suggestions = useMemo(() => computeSuggestions(routine, progress, now), [routine, progress, now]);
   const health = useMemo(() => computeHealth(routine, progress, now), [routine, progress, now]);
+  const checkInKey = journal.checkIns.map((item) => `${item.date}:${item.startedAt ?? ""}:${item.closedAt ?? ""}`).join("|");
+  const streakInfo = checkInStreak(journal.checkIns, today);
+  const todayCheckIn = journal.checkIns.find((item) => item.date === today) ?? null;
 
   useEffect(() => {
     try {
@@ -179,6 +204,7 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
       setNotes(snapshot.notes);
       setSettings(snapshot.settings);
       setRecovery(loadRecovery());
+      setJournal(loadCheckIns());
       setPermission(reminderPermission());
       void registerReminderWorker();
       if (readSessionEntered()) setEntered(true);
@@ -229,6 +255,16 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
     if (!ready) return;
     saveRecovery(recovery);
   }, [recovery, ready]);
+
+  useEffect(() => {
+    if (!ready) return;
+    saveCheckIns(journal);
+  }, [journal, ready]);
+
+  useEffect(() => {
+    if (!ready) return;
+    setJournal((current) => syncBadges(current, routine, progress, today));
+  }, [ready, routine, progress, today, checkInKey]);
 
   useEffect(() => {
     if (!ready || !routine) return;
@@ -396,6 +432,44 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
     return next;
   };
 
+  const startCheckIn = () => {
+    setJournal((current) => markCheckIn(current, today, "start", new Date().toISOString()));
+  };
+
+  const closeCheckIn = () => {
+    setJournal((current) => markCheckIn(current, today, "close", new Date().toISOString()));
+  };
+
+  const applyPlanner = async (proposed: DraftCheckpoint[], reminders: boolean) => {
+    if (proposed.length === 0) return { ok: false, error: "Nothing new to add." };
+    if (proposed.some((item) => item.conflict || !item.title.trim() || !isValidTime(item.time))) {
+      return { ok: false, error: "Fix overlapping or empty times before saving." };
+    }
+    let remindersState: "on" | "off" | "denied" = "off";
+    if (reminders) {
+      const next = await requestReminders();
+      remindersState = next === "granted" ? "on" : next === "denied" || next === "unsupported" ? "denied" : "off";
+    }
+    const remindersOn = remindersState === "on";
+    touchRoutine((current) => ({
+      ...current,
+      checkpoints: [
+        ...current.checkpoints,
+        ...proposed.map((item) => ({
+          id: createId("cp"),
+          time: normalizeTime(item.time),
+          title: item.title.trim(),
+          icon: "target",
+          tasks: item.tasks.filter((title) => title.trim()).map((title) => ({ id: createId("tk"), title: title.trim() })),
+          enabled: true,
+          repeatDays: [...ALL_DAYS],
+          reminderEnabled: remindersOn,
+        })),
+      ],
+    }));
+    return { ok: true, reminders: remindersState };
+  };
+
   const enableAllReminders = async () => {
     const next = await requestReminders();
     if (next !== "granted") return next;
@@ -433,6 +507,7 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
     setNotes({});
     setSettings(DEFAULT_SETTINGS);
     setRecovery(EMPTY_RECOVERY);
+    setJournal(EMPTY_CHECKINS);
     setSelectedId(null);
     setEntered(false);
   };
@@ -542,6 +617,13 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
     acceptRecovery,
     dismissRecovery,
     todayCheckpoints,
+    todayCheckIn,
+    checkInStreak: streakInfo,
+    badges: journal.badges,
+    checkInHistory: recentCheckIns(journal.checkIns),
+    startCheckIn,
+    closeCheckIn,
+    applyPlanner,
   };
 
   return <DaymarkContext.Provider value={value}>{children}</DaymarkContext.Provider>;
