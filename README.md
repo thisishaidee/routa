@@ -18,7 +18,8 @@ The lime incomplete-circle mark is unchanged. Only the wordmark and product name
 - Missed sessions: Today offers a few choices (move only today, change the usual time, or leave it). Nothing moves until you pick. A today-only move is stored in `routa:v2:recovery` and does not rewrite the repeating checkpoint or past days.
 - Check-in: start or close the day. The check-in streak is separate from the routine-completion streak. History is the days you actually checked in.
 - Badges appear only after they are earned: First Check-in, First Routine Completed, 3-Day Check-in Streak, 7-Day Consistency, 30-Day Milestone, First Full Day Completed. They are not repeated and not taken away.
-- Goal builder: name a goal, your hours, and commitments you already have. Review and edit the plan before it is saved. It does not invent commitments or overwrite the current routine. A later model can replace `getRoutinePlanner()` without changing that review step.
+- Goal builder: write a goal in your own words. The on-device reader (`interpretGoal` behind `getRoutinePlanner()`) drafts only the sessions, times, and lengths you mentioned, then you review before save. It does not invent the rest of the day or call an outside model. A later model can replace `getRoutinePlanner()` without changing that review step.
+- Intelligence on Progress is counted only from checkpoints you scheduled and marked done. It does not guess why a day was missed.
 
 ### Reminders / alarms (honest)
 

@@ -66,9 +66,14 @@ export function ProgressView() {
         )}
       </section>
 
-      {insights.length > 0 ? (
-        <section className="mt-4 rounded-3xl border border-line bg-paper p-6">
-          <p className="text-[10px] font-black tracking-[0.18em] text-soft">INSIGHTS</p>
+      <section className="mt-4 rounded-3xl border border-line bg-paper p-6">
+        <p className="text-[10px] font-black tracking-[0.18em] text-soft">INTELLIGENCE</p>
+        <p className="mt-2 text-pretty text-sm leading-6 text-quiet">
+          Only from checkpoints you scheduled and marked done. No guessed reasons.
+        </p>
+        {insights.length === 0 ? (
+          <p className="mt-3 text-sm text-quiet">Not enough recorded days to say more than that.</p>
+        ) : (
           <ul className="mt-3 space-y-2">
             {insights.map((item) => (
               <li key={item.id} className="text-pretty text-sm leading-6 text-ink">
@@ -76,12 +81,13 @@ export function ProgressView() {
               </li>
             ))}
           </ul>
-        </section>
-      ) : null}
+        )}
+      </section>
 
       {suggestions.length > 0 ? (
         <section className="mt-4 rounded-3xl bg-mist p-6">
-          <p className="text-[10px] font-black tracking-[0.18em] text-olive">SUGGESTIONS</p>
+          <p className="text-[10px] font-black tracking-[0.18em] text-olive">OPTIONS</p>
+          <p className="mt-2 text-sm leading-6 text-olive">Suggestions only. The routine stays put until you change it.</p>
           <ul className="mt-3 space-y-2">
             {suggestions.map((item) => (
               <li key={item.id} className="text-pretty text-sm leading-6 text-olive">

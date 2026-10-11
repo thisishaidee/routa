@@ -82,6 +82,24 @@ describe("routine planner", () => {
     assert.equal(draft.proposed[0].from, "commitment");
   });
 
+  it("reads a goal into the sessions you named and does not invent the rest of the day", () => {
+    const draft = plan({
+      goal: "study for 2 hours in the morning and gym at 6pm",
+      dayStart: "07:00",
+      dayEnd: "22:00",
+      commitments: [],
+      existing: [],
+    });
+    assert.deepEqual(
+      draft.proposed.map((item) => item.title),
+      ["Study", "Gym"],
+    );
+    assert.equal(draft.proposed[0].time < "12:00", true);
+    assert.equal(draft.proposed[0].tasks[0], "About 2 hours");
+    assert.equal(draft.proposed[1].time, "18:00");
+    assert.equal(draft.proposed.some((item) => /lunch|breakfast|sleep|meeting/i.test(item.title)), false);
+  });
+
   it("clears a conflict once the time is free", () => {
     const blocked: DraftCheckpoint = {
       key: "commitment-0",

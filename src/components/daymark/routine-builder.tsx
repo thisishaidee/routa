@@ -80,7 +80,7 @@ export function RoutineBuilder() {
         </button>
       </div>
       <p className="mt-2 text-pretty text-sm leading-6 text-quiet">
-        Name what you want and the commitments you already have. Nothing is saved until you review it.
+        Write the day in your own words. Routa reads the sessions, times, and lengths you actually mention. It does not invent the rest, and nothing is saved until you review it.
       </p>
 
       {draft ? (
@@ -111,6 +111,7 @@ export function RoutineBuilder() {
                   aria-label="Session name"
                   className="h-11 w-full rounded-xl border border-line bg-paper px-3 text-sm font-bold outline-none focus:border-lime"
                 />
+                {item.tasks[0] ? <p className="mt-2 text-xs text-quiet">{item.tasks[0]}</p> : null}
                 <div className="mt-2 flex gap-2">
                   <input
                     type="time"
