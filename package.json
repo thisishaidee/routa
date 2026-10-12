@@ -6,7 +6,8 @@
     "dev": "bun run clear-cache && NODE_ENV=development bun run --hot server.ts",
     "build": "vite build",
     "prod": "bun run build && NODE_ENV=production bun run server.ts",
-    "preview": "bun run vite preview"
+    "preview": "bun run vite preview",
+    "mcp": "node --import ./scripts/register-ts-ext.mjs --experimental-strip-types scripts/routa-mcp.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

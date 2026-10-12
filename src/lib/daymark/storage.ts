@@ -316,6 +316,7 @@ export function clearV2Storage() {
     "routa:v2:alarms",
     "routa:v2:recovery",
     "routa:v2:checkins",
+    "routa:v2:agent",
   ];
   for (const key of [...Object.values(STORAGE_KEYS), ...extra]) {
     try {

@@ -20,6 +20,7 @@ The lime incomplete-circle mark is unchanged. Only the wordmark and product name
 - Badges appear only after they are earned: First Check-in, First Routine Completed, 3-Day Check-in Streak, 7-Day Consistency, 30-Day Milestone, First Full Day Completed. They are not repeated and not taken away.
 - Goal builder: write a goal in your own words. The on-device reader (`interpretGoal` behind `getRoutinePlanner()`) drafts only the sessions, times, and lengths you mentioned, then you review before save. It does not invent the rest of the day or call an outside model. A later model can replace `getRoutinePlanner()` without changing that review step.
 - Intelligence on Progress is counted only from checkpoints you scheduled and marked done. It does not guess why a day was missed.
+- Agents: `npm run mcp` speaks MCP over stdio and on `http://127.0.0.1:8787`. Claude, Cursor, or another local agent can add a session or turn a reminder on. Routa applies it while the page is open and listening. A reminder is still “while Routa is open”, never a Clock alarm. Set `ROUTA_MCP_TOKEN` so a tunnel cannot edit the routine without it.
 
 ### Reminders / alarms (honest)
 

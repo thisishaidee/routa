@@ -3,6 +3,7 @@ import { alarmStatusLabel, deniedRecoveryCopy, isStandaloneDisplay, pushSupport,
 import { backupFilename } from "@/lib/daymark/backup";
 import { useDaymark } from "@/lib/daymark/store";
 import { clockLabel, deviceTimeZone } from "@/lib/daymark/time";
+import { AgentLinkCard } from "./agent-link";
 
 export function SettingsView() {
   const {
@@ -201,6 +202,8 @@ export function SettingsView() {
             })}
           </div>
         </div>
+
+        <AgentLinkCard />
 
         <div className="rounded-3xl border border-line bg-paper p-5">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-soft">Install</p>

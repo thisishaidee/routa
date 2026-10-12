@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { snapshotToJson, parseBackup } from "./backup";
 import { computeHealth, computeInsights, computeSuggestions } from "./insights";
 import { createId } from "./ids";
@@ -68,6 +68,16 @@ import {
   type Settings,
 } from "./types";
 import { isValidTime, normalizeTime, todayKey as dateKey, deviceTimeZone } from "./time";
+import {
+  createAgentToken,
+  emptyAgentLink,
+  isLocalAgentOrigin,
+  loadAgentLink,
+  pullAgent,
+  pushAgent,
+  saveAgentLink,
+  type AgentLink,
+} from "./mcp/link";
 
 interface DaymarkContextValue {
   ready: boolean;
@@ -122,6 +132,9 @@ interface DaymarkContextValue {
   startCheckIn: () => void;
   closeCheckIn: () => void;
   applyPlanner: (proposed: DraftCheckpoint[], reminders: boolean) => Promise<{ ok: boolean; reminders?: "on" | "off" | "denied"; error?: string }>;
+  agentLink: AgentLink;
+  agentStatus: "idle" | "connected" | "offline" | "unauthorized";
+  updateAgentLink: (patch: Partial<AgentLink>) => void;
 }
 
 const DaymarkContext = createContext<DaymarkContextValue | null>(null);
@@ -162,6 +175,12 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [recovery, setRecovery] = useState<RecoveryState>(EMPTY_RECOVERY);
   const [journal, setJournal] = useState<CheckInState>(EMPTY_CHECKINS);
+  const [agentLink, setAgentLink] = useState<AgentLink>(emptyAgentLink);
+  const [agentStatus, setAgentStatus] = useState<"idle" | "connected" | "offline" | "unauthorized">("idle");
+  const routineRef = useRef(routine);
+  const remindersRef = useRef(false);
+  routineRef.current = routine;
+  remindersRef.current = settings.remindersEnabled;
 
   const today = dateKey(now);
   const timeZone = deviceTimeZone();
@@ -205,6 +224,7 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
       setSettings(snapshot.settings);
       setRecovery(loadRecovery());
       setJournal(loadCheckIns());
+      setAgentLink(loadAgentLink());
       setPermission(reminderPermission());
       void registerReminderWorker();
       if (readSessionEntered()) setEntered(true);
@@ -260,6 +280,47 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
     if (!ready) return;
     saveCheckIns(journal);
   }, [journal, ready]);
+
+  useEffect(() => {
+    if (!ready) return;
+    saveAgentLink(agentLink);
+  }, [agentLink, ready]);
+
+  useEffect(() => {
+    if (!ready || !agentLink.enabled) {
+      if (ready && !agentLink.enabled) setAgentStatus("idle");
+      return;
+    }
+    let cancel = false;
+    const run = async () => {
+      const pulled = await pullAgent(agentLink.origin, agentLink.token);
+      if (cancel) return;
+      if ("error" in pulled) {
+        setAgentStatus(pulled.error === "unauthorized" ? "unauthorized" : "offline");
+        return;
+      }
+      setAgentStatus("connected");
+      const local = routineRef.current;
+      const remoteAt = pulled.routine?.updatedAt ?? "";
+      const localAt = local?.updatedAt ?? "";
+      if (pulled.routine && remoteAt > localAt) {
+        setRoutine(hydrateRoutine(pulled.routine));
+        setSettings((current) =>
+          current.remindersEnabled === pulled.remindersEnabled ? current : { ...current, remindersEnabled: pulled.remindersEnabled },
+        );
+        return;
+      }
+      if (local && (localAt > remoteAt || remindersRef.current !== pulled.remindersEnabled)) {
+        await pushAgent(agentLink.origin, agentLink.token, { routine: local, remindersEnabled: remindersRef.current });
+      }
+    };
+    void run();
+    const timer = window.setInterval(() => void run(), 4000);
+    return () => {
+      cancel = true;
+      window.clearInterval(timer);
+    };
+  }, [ready, agentLink.enabled, agentLink.origin, agentLink.token]);
 
   useEffect(() => {
     if (!ready) return;
@@ -508,6 +569,7 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
     setSettings(DEFAULT_SETTINGS);
     setRecovery(EMPTY_RECOVERY);
     setJournal(EMPTY_CHECKINS);
+    setAgentLink(emptyAgentLink());
     setSelectedId(null);
     setEntered(false);
   };
@@ -624,6 +686,16 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
     startCheckIn,
     closeCheckIn,
     applyPlanner,
+    agentLink,
+    agentStatus,
+    updateAgentLink: (patch) => {
+      setAgentLink((current) => {
+        if (patch.origin && !isLocalAgentOrigin(patch.origin)) return current;
+        const next = { ...current, ...patch };
+        if (next.enabled && !next.token) next.token = createAgentToken();
+        return next;
+      });
+    },
   };
 
   return <DaymarkContext.Provider value={value}>{children}</DaymarkContext.Provider>;
