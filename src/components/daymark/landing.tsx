@@ -146,7 +146,7 @@ export function Landing({
             rel="noreferrer"
             className="mt-5 inline-flex h-12 items-center rounded-full bg-lime px-6 text-sm font-bold text-forest focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime lg:mt-0 lg:shrink-0"
           >
-            See setup
+            View on GitHub
           </a>
         </section>
 
@@ -250,7 +250,7 @@ function SampleDay({ className }: { className?: string }) {
         ))}
       </ol>
       <p className="mt-3 text-xs font-bold text-paper/80">
-        <span className="tabular-nums">3 / 13</span> checkpoints
+        <span className="tabular-nums">3 / 6</span> checkpoints
       </p>
       <ul className="mt-3 flex gap-4 text-[11px] text-paper/80" aria-hidden="true">
         <li className="flex items-center gap-1.5">
