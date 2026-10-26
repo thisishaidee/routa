@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { X } from "lucide-react";
 import { DaymarkMark } from "@/lib/daymark/icons";
 import { buildTemplate, TEMPLATE_OPTIONS, type TemplateId } from "@/lib/daymark/templates";
@@ -10,12 +10,24 @@ export function Onboarding() {
   const { completeOnboarding } = useDaymark();
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
+  const [nameError, setNameError] = useState("");
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const [focusAreas, setFocusAreas] = useState<FocusAreaId[]>([]);
   const [templateId, setTemplateId] = useState<TemplateId>("balanced");
   const [draftRoutine, setDraftRoutine] = useState<Routine | null>(null);
 
   const toggleFocus = (id: FocusAreaId) => {
     setFocusAreas((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+  };
+
+  const continueFromWelcome = () => {
+    if (!name.trim()) {
+      setNameError("Enter your name to continue.");
+      nameInputRef.current?.focus();
+      return;
+    }
+    setNameError("");
+    setStep(1);
   };
 
   const goPreview = () => {
@@ -66,16 +78,29 @@ export function Onboarding() {
             <label className="mt-8 text-xs font-bold text-quiet">
               What should we call you?
               <input
+                ref={nameInputRef}
                 value={name}
-                onChange={(event) => setName(event.target.value)}
+                onChange={(event) => {
+                  setName(event.target.value);
+                  if (nameError) setNameError("");
+                }}
                 placeholder="Your name"
                 autoComplete="given-name"
-                className="mt-2 h-12 w-full rounded-2xl border border-line bg-paper px-4 text-sm outline-none focus:border-lime"
+                aria-invalid={nameError ? true : undefined}
+                aria-describedby={nameError ? "name-error" : undefined}
+                className={`mt-2 h-12 w-full rounded-2xl border bg-paper px-4 text-sm outline-none focus:border-lime ${
+                  nameError ? "border-danger" : "border-line"
+                }`}
               />
             </label>
+            {nameError ? (
+              <p id="name-error" role="alert" className="mt-2 text-xs font-semibold text-danger">
+                {nameError}
+              </p>
+            ) : null}
             <button
               type="button"
-              onClick={() => setStep(1)}
+              onClick={continueFromWelcome}
               className="mt-auto h-12 rounded-2xl bg-forest text-sm font-bold text-paper"
             >
               Build my routine
