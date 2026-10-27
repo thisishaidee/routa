@@ -6,6 +6,8 @@ import { FOCUS_AREAS, type FocusAreaId, type Profile, type Routine } from "@/lib
 import { clockLabel } from "@/lib/daymark/time";
 import { useDaymark } from "@/lib/daymark/store";
 
+const STEP_COUNT = 4;
+
 export function Onboarding() {
   const { completeOnboarding } = useDaymark();
   const [step, setStep] = useState(0);
@@ -58,9 +60,19 @@ export function Onboarding() {
   return (
     <main className="min-h-dvh bg-canvas px-5 py-10 text-ink">
       <div className="mx-auto flex min-h-[80dvh] max-w-lg flex-col">
-        <div className="mb-10 flex items-center gap-2 text-lg font-bold tracking-tight">
-          <DaymarkMark />
-          routa
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 text-lg font-extrabold tracking-[0.14em]">
+            <DaymarkMark />
+            ROUTA
+          </div>
+          <p className="text-[11px] font-black tracking-[0.12em] text-quiet">
+            STEP {step + 1} OF {STEP_COUNT}
+          </p>
+        </div>
+        <div className="mb-8 mt-5 flex gap-1.5" aria-hidden="true">
+          {Array.from({ length: STEP_COUNT }, (_, index) => (
+            <span key={index} className={`h-1 flex-1 rounded-full ${index <= step ? "bg-forest" : "bg-line"}`} />
+          ))}
         </div>
 
         {step === 0 ? (
@@ -68,11 +80,11 @@ export function Onboarding() {
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-quiet">Welcome</p>
             <h1 className="mt-3 text-4xl font-black tracking-[-0.04em] text-balance">Build a daily rhythm that fits your life.</h1>
             <p className="mt-4 text-pretty text-sm leading-6 text-quiet">
-              Routa helps you plan checkpoints, follow them through the day, and see real progress. You can start from a template or from nothing.
+              ROUTA helps you plan checkpoints, follow them through the day, and see real progress. You can start from a template or from nothing.
             </p>
             <ul className="mt-5 space-y-2 text-sm leading-6 text-quiet">
               <li>Create your own routine, including times and tasks.</li>
-              <li>Optional reminders while Routa is open in this browser.</li>
+              <li>Optional reminders while ROUTA is open in this browser.</li>
               <li>Progress stays on this device unless you export a backup.</li>
             </ul>
             <label className="mt-8 text-xs font-bold text-quiet">
@@ -101,9 +113,9 @@ export function Onboarding() {
             <button
               type="button"
               onClick={continueFromWelcome}
-              className="mt-auto h-12 rounded-2xl bg-forest text-sm font-bold text-paper"
+              className="mt-auto h-14 rounded-full bg-forest text-sm font-bold text-paper"
             >
-              Build my routine
+              Build my routine →
             </button>
           </section>
         ) : null}
@@ -121,8 +133,9 @@ export function Onboarding() {
                     key={area.id}
                     type="button"
                     onClick={() => toggleFocus(area.id)}
+                    aria-pressed={selected}
                     className={`min-h-14 rounded-2xl border px-4 text-left text-sm font-bold ${
-                      selected ? "border-lime bg-mist text-olive" : "border-line bg-paper"
+                      selected ? "border-forest bg-cream ring-1 ring-forest" : "border-line bg-paper"
                     }`}
                   >
                     {area.label}
@@ -131,10 +144,10 @@ export function Onboarding() {
               })}
             </div>
             <div className="mt-auto flex gap-3 pt-8">
-              <button type="button" onClick={() => setStep(0)} className="h-12 flex-1 rounded-2xl border border-line text-sm font-bold">
+              <button type="button" onClick={() => setStep(0)} className="h-14 flex-1 rounded-full border border-line text-sm font-bold">
                 Back
               </button>
-              <button type="button" onClick={() => setStep(2)} className="h-12 flex-1 rounded-2xl bg-forest text-sm font-bold text-paper">
+              <button type="button" onClick={() => setStep(2)} className="h-14 flex-1 rounded-full bg-forest text-sm font-bold text-paper">
                 Continue
               </button>
             </div>
@@ -153,8 +166,9 @@ export function Onboarding() {
                     key={option.id}
                     type="button"
                     onClick={() => setTemplateId(option.id)}
-                    className={`w-full rounded-2xl border px-4 py-4 text-left ${
-                      selected ? "border-lime bg-mist" : "border-line bg-paper"
+                    aria-pressed={selected}
+                    className={`w-full rounded-3xl border px-5 py-4 text-left ${
+                      selected ? "border-forest bg-cream ring-1 ring-forest" : "border-line bg-paper"
                     }`}
                   >
                     <strong className="block text-sm">{option.name}</strong>
@@ -164,10 +178,10 @@ export function Onboarding() {
               })}
             </div>
             <div className="mt-auto flex gap-3 pt-8">
-              <button type="button" onClick={() => setStep(1)} className="h-12 flex-1 rounded-2xl border border-line text-sm font-bold">
+              <button type="button" onClick={() => setStep(1)} className="h-14 flex-1 rounded-full border border-line text-sm font-bold">
                 Back
               </button>
-              <button type="button" onClick={goPreview} className="h-12 flex-1 rounded-2xl bg-forest text-sm font-bold text-paper">
+              <button type="button" onClick={goPreview} className="h-14 flex-1 rounded-full bg-forest text-sm font-bold text-paper">
                 Continue
               </button>
             </div>
@@ -205,7 +219,7 @@ export function Onboarding() {
                     type="button"
                     aria-label={`Remove ${item.title}`}
                     onClick={() => removeCheckpoint(item.id)}
-                    className="grid size-10 shrink-0 place-items-center rounded-xl text-quiet"
+                    className="grid size-11 shrink-0 place-items-center rounded-full text-quiet"
                   >
                     <X size={16} />
                   </button>
@@ -213,11 +227,11 @@ export function Onboarding() {
               ))}
             </div>
             <div className="mt-auto flex gap-3 pt-8">
-              <button type="button" onClick={() => setStep(2)} className="h-12 flex-1 rounded-2xl border border-line text-sm font-bold">
+              <button type="button" onClick={() => setStep(2)} className="h-14 flex-1 rounded-full border border-line text-sm font-bold">
                 Back
               </button>
-              <button type="button" onClick={finish} className="h-12 flex-1 rounded-2xl bg-forest text-sm font-bold text-paper">
-                Start my Routa
+              <button type="button" onClick={finish} className="h-14 flex-1 rounded-full bg-forest text-sm font-bold text-paper">
+                Start my ROUTA
               </button>
             </div>
           </section>
