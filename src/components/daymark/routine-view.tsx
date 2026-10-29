@@ -6,6 +6,7 @@ import type { DaymarkView } from "./nav";
 import { RoutineBuilder } from "./routine-builder";
 
 const DAYS = ["M", "T", "W", "T", "F", "S", "S"];
+const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export function RoutineView({
   onAdd,
@@ -21,8 +22,24 @@ export function RoutineView({
 
   return (
     <section className="px-5 py-6 sm:px-8 lg:px-12 lg:py-12">
-      <p className="text-xs font-bold uppercase tracking-[0.16em] text-quiet">Routine</p>
-      <h1 className="mt-2 text-3xl font-black tracking-[-0.04em]">Your rhythm</h1>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-quiet">Routine</p>
+          <h1 className="mt-2 text-3xl font-black tracking-[-0.04em]">Your rhythm</h1>
+          <p className="mt-1 text-sm text-quiet">
+            {checkpoints.length} checkpoint{checkpoints.length === 1 ? "" : "s"}
+          </p>
+        </div>
+        {checkpoints.length > 0 ? (
+          <button
+            type="button"
+            onClick={onAdd}
+            className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-lime px-5 text-sm font-bold text-forest"
+          >
+            <Plus size={16} /> Add
+          </button>
+        ) : null}
+      </div>
       <label className="mt-6 block text-xs font-bold text-quiet">
         Routine name
         <input
@@ -40,7 +57,7 @@ export function RoutineView({
           <p className="mt-2 max-w-md text-sm leading-6 text-quiet">
             Create your first checkpoint and build a day that works for you.
           </p>
-          <button type="button" onClick={onAdd} className="mt-6 h-12 rounded-2xl bg-forest px-5 text-sm font-bold text-paper">
+          <button type="button" onClick={onAdd} className="mt-6 h-12 rounded-full bg-forest px-6 text-sm font-bold text-paper">
             Add checkpoint
           </button>
         </div>
@@ -55,13 +72,29 @@ export function RoutineView({
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-bold text-quiet">{clockLabel(item.time)}</p>
                   <h3 className="truncate text-base font-bold">{item.title}</h3>
-                  <p className="mt-1 text-[11px] font-bold tracking-wide text-soft">
-                    {DAYS.map((label, day) => (
-                      <span key={`${item.id}-${day}`} className={item.repeatDays.includes(day as 0 | 1 | 2 | 3 | 4 | 5 | 6) ? "text-olive" : "text-line"}>
-                        {label}{" "}
-                      </span>
-                    ))}
-                  </p>
+                  <div
+                    role="img"
+                    aria-label={`Repeats ${
+                      DAY_NAMES.filter((_, day) => item.repeatDays.includes(day as 0 | 1 | 2 | 3 | 4 | 5 | 6)).join(", ") ||
+                      "on no days"
+                    }`}
+                    className="mt-2 flex gap-1"
+                  >
+                    {DAYS.map((label, day) => {
+                      const on = item.repeatDays.includes(day as 0 | 1 | 2 | 3 | 4 | 5 | 6);
+                      return (
+                        <span
+                          key={`${item.id}-${day}`}
+                          aria-hidden="true"
+                          className={`grid size-5 place-items-center rounded-full text-[10px] font-bold ${
+                            on ? "bg-forest text-paper" : "border border-line text-quiet"
+                          }`}
+                        >
+                          {label}
+                        </span>
+                      );
+                    })}
+                  </div>
                 </div>
                 <div className="flex shrink-0 flex-col gap-1">
                   <button
@@ -88,21 +121,22 @@ export function RoutineView({
                 <button
                   type="button"
                   onClick={() => onEdit(item.id)}
-                  className="inline-flex h-11 items-center gap-1 rounded-xl bg-canvas px-3 text-xs font-bold"
+                  className="inline-flex h-11 items-center gap-1 rounded-full bg-canvas px-4 text-xs font-bold"
                 >
                   <Pencil size={14} /> Edit
                 </button>
                 <button
                   type="button"
                   onClick={() => toggleCheckpointEnabled(item.id)}
-                  className="h-11 rounded-xl bg-canvas px-3 text-xs font-bold"
+                  aria-pressed={item.enabled}
+                  className="h-11 rounded-full bg-canvas px-4 text-xs font-bold"
                 >
                   {item.enabled ? "Enabled" : "Disabled"}
                 </button>
                 <button
                   type="button"
                   onClick={() => toggleCheckpointReminder(item.id)}
-                  className="inline-flex h-11 items-center gap-1 rounded-xl bg-canvas px-3 text-xs font-bold"
+                  className="inline-flex h-11 items-center gap-1 rounded-full bg-canvas px-4 text-xs font-bold"
                 >
                   {item.reminderEnabled ? <Bell size={14} /> : <BellOff size={14} />}
                   Reminder {item.reminderEnabled ? "on" : "off"}
