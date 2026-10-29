@@ -75,7 +75,7 @@ export function SettingsView() {
   return (
     <section className="px-5 py-6 sm:px-8 lg:px-12 lg:py-12">
       <p className="text-xs font-bold uppercase tracking-[0.16em] text-quiet">Settings</p>
-      <h1 className="mt-2 text-3xl font-black tracking-[-0.04em]">Your Routa</h1>
+      <h1 className="mt-2 text-3xl font-black tracking-[-0.04em]">Your ROUTA</h1>
 
       <div className="mt-6 space-y-4">
         <label className="block rounded-3xl border border-line bg-paper p-5 text-xs font-bold text-quiet">
@@ -84,7 +84,7 @@ export function SettingsView() {
             value={profile.name}
             onChange={(event) => updateProfile({ name: event.target.value })}
             placeholder="What should we call you?"
-            className="mt-2 h-12 w-full rounded-xl border border-line bg-canvas px-3 text-sm font-medium text-ink outline-none focus:border-lime"
+            className="mt-2 h-12 w-full rounded-2xl border border-line bg-canvas px-4 text-sm font-medium text-ink outline-none focus:border-lime"
           />
         </label>
 
@@ -94,7 +94,7 @@ export function SettingsView() {
             value={routine?.name ?? ""}
             onChange={(event) => updateRoutineMeta({ name: event.target.value })}
             placeholder="My routine"
-            className="mt-2 h-12 w-full rounded-xl border border-line bg-canvas px-3 text-sm font-medium text-ink outline-none focus:border-lime"
+            className="mt-2 h-12 w-full rounded-2xl border border-line bg-canvas px-4 text-sm font-medium text-ink outline-none focus:border-lime"
           />
         </label>
 
@@ -104,7 +104,7 @@ export function SettingsView() {
             value={routine?.description ?? ""}
             onChange={(event) => updateRoutineMeta({ description: event.target.value })}
             placeholder="Optional: what this rhythm is for"
-            className="mt-2 min-h-20 w-full resize-none rounded-xl border border-line bg-canvas p-3 text-sm font-medium text-ink outline-none focus:border-lime"
+            className="mt-2 min-h-20 w-full resize-none rounded-2xl border border-line bg-canvas p-4 text-sm font-medium text-ink outline-none focus:border-lime"
           />
         </label>
 
@@ -114,14 +114,16 @@ export function SettingsView() {
             <button
               type="button"
               onClick={() => updateSettings({ weekStartsOn: 1 })}
-              className={`h-12 rounded-xl text-sm font-bold ${settings.weekStartsOn === 1 ? "bg-forest text-paper" : "bg-canvas"}`}
+              aria-pressed={settings.weekStartsOn === 1}
+              className={`h-12 rounded-full text-sm font-bold ${settings.weekStartsOn === 1 ? "bg-forest text-paper" : "bg-canvas"}`}
             >
               Monday
             </button>
             <button
               type="button"
               onClick={() => updateSettings({ weekStartsOn: 0 })}
-              className={`h-12 rounded-xl text-sm font-bold ${settings.weekStartsOn === 0 ? "bg-forest text-paper" : "bg-canvas"}`}
+              aria-pressed={settings.weekStartsOn === 0}
+              className={`h-12 rounded-full text-sm font-bold ${settings.weekStartsOn === 0 ? "bg-forest text-paper" : "bg-canvas"}`}
             >
               Sunday
             </button>
@@ -135,8 +137,8 @@ export function SettingsView() {
           <p className="mt-2 text-pretty text-sm leading-6 text-quiet">{copy.body}</p>
           <p className="mt-2 text-xs text-quiet">
             {capabilities.exactAlarms
-              ? "This device can schedule Routa alarms through the system alarm API. It still will not add an alarm to Clock."
-              : "Web reminders are notifications, not native Clock alarms. They only fire while Routa stays open."}
+              ? "This device can schedule ROUTA alarms through the system alarm API. It still will not add an alarm to Clock."
+              : "Web reminders are notifications, not native Clock alarms. They only fire while ROUTA stays open."}
           </p>
 
           {copy.unsupported ? <p className="mt-3 text-sm font-medium text-danger">{copy.unsupported}</p> : null}
@@ -152,7 +154,7 @@ export function SettingsView() {
               type="button"
               onClick={() => void enableReminders()}
               disabled={permission === "unsupported" || permission === "denied"}
-              className={`h-12 rounded-xl px-4 text-sm font-bold disabled:opacity-50 ${settings.remindersEnabled ? "bg-mist text-olive" : "bg-forest text-paper"}`}
+              className={`h-12 rounded-full px-5 text-sm font-bold disabled:opacity-50 ${settings.remindersEnabled ? "bg-mist text-olive" : "bg-forest text-paper"}`}
             >
               {copy.denied ? "Reminders are disabled" : copy.button}
             </button>
@@ -160,7 +162,7 @@ export function SettingsView() {
               <button
                 type="button"
                 onClick={() => updateSettings({ remindersEnabled: false })}
-                className="h-12 rounded-xl bg-canvas px-4 text-sm font-bold"
+                className="h-12 rounded-full bg-canvas px-5 text-sm font-bold"
               >
                 Pause all
               </button>
@@ -168,10 +170,10 @@ export function SettingsView() {
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
-            <button type="button" onClick={() => void enableAllReminders()} className="h-11 rounded-xl bg-canvas px-3 text-xs font-bold">
+            <button type="button" onClick={() => void enableAllReminders()} className="h-11 rounded-full bg-canvas px-4 text-xs font-bold">
               Enable all reminders
             </button>
-            <button type="button" onClick={disableAllReminders} className="h-11 rounded-xl bg-canvas px-3 text-xs font-bold">
+            <button type="button" onClick={disableAllReminders} className="h-11 rounded-full bg-canvas px-4 text-xs font-bold">
               Disable all reminders
             </button>
           </div>
@@ -180,7 +182,7 @@ export function SettingsView() {
             {(routine?.checkpoints ?? []).map((item) => {
               const status = alarmStatus(item);
               return (
-                <div key={item.id} className="flex items-center gap-3 rounded-xl bg-canvas px-3 py-3">
+                <div key={item.id} className="flex items-center gap-3 rounded-2xl bg-canvas px-4 py-3">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-bold">{item.title}</p>
                     <p className="text-xs text-quiet">
@@ -191,7 +193,9 @@ export function SettingsView() {
                   <button
                     type="button"
                     onClick={() => toggleCheckpointReminder(item.id)}
-                    className={`h-11 min-w-16 rounded-xl text-xs font-bold ${
+                    aria-pressed={item.reminderEnabled}
+                    aria-label={`Reminder for ${item.title}`}
+                    className={`h-11 min-w-16 rounded-full text-xs font-bold ${
                       item.reminderEnabled ? "bg-mist text-olive" : "bg-paper text-quiet"
                     }`}
                   >
@@ -207,30 +211,30 @@ export function SettingsView() {
 
         <div className="rounded-3xl border border-line bg-paper p-5">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-soft">Install</p>
-          <h2 className="mt-2 text-xl font-black">Use Routa like an app</h2>
+          <h2 className="mt-2 text-xl font-black">Use ROUTA like an app</h2>
           <p className="mt-2 text-pretty text-sm leading-6 text-quiet">
             {standalone
-              ? "Routa is running as an installed app on this device."
-              : "Add Routa to your home screen from the browser menu. Reminders still need the app open."}
+              ? "ROUTA is running as an installed app on this device."
+              : "Add ROUTA to your home screen from the browser menu. Reminders still need the app open."}
           </p>
           <p className="mt-2 text-xs text-quiet">
             {push === "available"
               ? "This browser can support Web Push later. It is not connected yet, so no background push is active."
               : "Web Push is not available in this browser."}{" "}
-            Routa never adds an alarm to your phone’s Clock app.
+            ROUTA never adds an alarm to your phone’s Clock app.
           </p>
         </div>
 
         <div className="rounded-3xl border border-line bg-paper p-5">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-soft">Backup</p>
           <p className="mt-2 text-pretty text-sm leading-6 text-quiet">
-            Everything lives on this device until you add an account later. Export a JSON backup so you can restore it.
+            Everything lives on this device. Export a JSON backup so you can restore it.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <button type="button" onClick={downloadBackup} className="h-12 rounded-xl bg-forest px-4 text-sm font-bold text-paper">
+            <button type="button" onClick={downloadBackup} className="h-12 rounded-full bg-forest px-5 text-sm font-bold text-paper">
               Export backup
             </button>
-            <button type="button" onClick={() => fileRef.current?.click()} className="h-12 rounded-xl bg-canvas px-4 text-sm font-bold">
+            <button type="button" onClick={() => fileRef.current?.click()} className="h-12 rounded-full bg-canvas px-5 text-sm font-bold">
               Import backup
             </button>
             <input
@@ -246,20 +250,20 @@ export function SettingsView() {
             />
           </div>
           {confirm === "import" ? (
-            <div className="mt-4 flex min-h-12 items-center justify-between rounded-xl bg-canvas px-3 text-sm">
+            <div className="mt-4 flex min-h-12 items-center justify-between rounded-2xl bg-canvas px-4 text-sm">
               <span className="font-medium">Replace the routine on this device?</span>
-              <div className="flex gap-3">
+              <div className="flex gap-1">
                 <button
                   type="button"
                   onClick={() => {
                     setConfirm(null);
                     setPendingImport(null);
                   }}
-                  className="font-bold text-quiet"
+                  className="min-h-11 px-3 font-bold text-quiet"
                 >
                   Cancel
                 </button>
-                <button type="button" onClick={confirmImport} className="font-bold text-danger">
+                <button type="button" onClick={confirmImport} className="min-h-11 px-3 font-bold text-danger">
                   Restore
                 </button>
               </div>
@@ -324,13 +328,13 @@ function DangerRow({
 }) {
   if (confirm) {
     return (
-      <div className="flex min-h-12 items-center justify-between rounded-xl bg-canvas px-3 text-sm">
+      <div className="flex min-h-12 items-center justify-between rounded-2xl bg-canvas px-4 text-sm">
         <span className="font-medium">Are you sure?</span>
-        <div className="flex gap-3">
-          <button type="button" onClick={onCancel} className="font-bold text-quiet">
+        <div className="flex gap-1">
+          <button type="button" onClick={onCancel} className="min-h-11 px-3 font-bold text-quiet">
             Cancel
           </button>
-          <button type="button" onClick={onConfirm} className="font-bold text-danger">
+          <button type="button" onClick={onConfirm} className="min-h-11 px-3 font-bold text-danger">
             Confirm
           </button>
         </div>
@@ -338,7 +342,7 @@ function DangerRow({
     );
   }
   return (
-    <button type="button" onClick={onAsk} className="flex h-12 w-full items-center rounded-xl bg-canvas px-3 text-left text-sm font-bold text-danger">
+    <button type="button" onClick={onAsk} className="flex h-12 w-full items-center rounded-2xl bg-canvas px-4 text-left text-sm font-bold text-danger">
       {label}
     </button>
   );
