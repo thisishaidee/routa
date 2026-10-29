@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { liveCheckpointId } from "./time.ts";
+import { hasStartedInDay, liveCheckpointId } from "./time.ts";
 import type { Checkpoint } from "./types.ts";
 
 function checkpoint(id: string, time: string): Checkpoint {
@@ -61,5 +61,29 @@ describe("liveCheckpointId", () => {
     assert.equal(liveCheckpointId(list, at(1, 0)), "late");
     assert.equal(liveCheckpointId(list, at(2, 30)), "later");
     assert.equal(liveCheckpointId(list, at(12, 0)), "build");
+  });
+});
+
+describe("hasStartedInDay", () => {
+  it("only counts after-midnight checkpoints that have passed between 00:00 and 04:59", () => {
+    assert.equal(hasStartedInDay("00:00", at(0, 5)), true);
+    assert.equal(hasStartedInDay("00:30", at(0, 5)), false);
+    assert.equal(hasStartedInDay("00:30", at(0, 40)), true);
+    assert.equal(hasStartedInDay("02:00", at(4, 59)), true);
+    assert.equal(hasStartedInDay("06:00", at(0, 5)), false);
+    assert.equal(hasStartedInDay("21:30", at(4, 59)), false);
+  });
+
+  it("keeps after-midnight checkpoints at the end of the day from 05:00 on", () => {
+    assert.equal(hasStartedInDay("00:00", at(5, 0)), false);
+    assert.equal(hasStartedInDay("00:30", at(10, 0)), false);
+    assert.equal(hasStartedInDay("00:30", at(23, 59)), false);
+  });
+
+  it("follows the clock through the day", () => {
+    assert.equal(hasStartedInDay("06:00", at(5, 59)), false);
+    assert.equal(hasStartedInDay("06:00", at(6, 0)), true);
+    assert.equal(hasStartedInDay("21:30", at(21, 29)), false);
+    assert.equal(hasStartedInDay("21:30", at(23, 59)), true);
   });
 });
