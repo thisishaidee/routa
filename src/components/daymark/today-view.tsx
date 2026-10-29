@@ -1,4 +1,4 @@
-import { Check, Pencil, Sparkles, Target } from "lucide-react";
+import { Check, Flame, Pencil } from "lucide-react";
 import { CheckpointIcon } from "@/lib/daymark/icons";
 import { useDaymark } from "@/lib/daymark/store";
 import { clockLabel, greeting, liveCheckpointId, todaysCheckpoints } from "@/lib/daymark/time";
@@ -12,31 +12,30 @@ function CheckInCard() {
   const earnedToday = badges.filter((item) => item.earnedOn === today);
 
   return (
-    <div className="mt-6 rounded-3xl border border-line bg-paper p-5">
-      <p className="text-[10px] font-black tracking-[0.18em] text-soft">CHECK-IN</p>
-      <p className="mt-2 text-sm leading-6 text-quiet">
-        Separate from finishing checkpoints. Check-in streak {checkInStreak.current}
-        {checkInStreak.best > 0 ? ` · best ${checkInStreak.best}` : ""}.
+    <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-paper px-4 py-3">
+      <p className="text-sm text-quiet">
+        <b className="text-ink">Check-in</b> · streak {checkInStreak.current}
+        {checkInStreak.best > 0 ? ` · best ${checkInStreak.best}` : ""}
       </p>
       {started && closed ? (
-        <p className="mt-3 text-sm font-bold">Checked in today.</p>
+        <p className="text-sm font-bold">Checked in today.</p>
       ) : (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {started ? <p className="w-full text-sm font-bold">Day started.</p> : null}
+        <div className="flex flex-wrap items-center gap-2">
+          {started ? <p className="text-sm font-bold">Day started.</p> : null}
           {!started ? (
-            <button type="button" onClick={startCheckIn} className="h-11 rounded-xl bg-forest px-4 text-xs font-bold text-paper">
+            <button type="button" onClick={startCheckIn} className="h-11 rounded-full bg-forest px-4 text-xs font-bold text-paper">
               Start the day
             </button>
           ) : null}
           {!closed ? (
-            <button type="button" onClick={closeCheckIn} className="h-11 rounded-xl border border-line bg-paper px-4 text-xs font-bold">
+            <button type="button" onClick={closeCheckIn} className="h-11 rounded-full bg-mist px-4 text-xs font-bold text-olive">
               Close the day
             </button>
           ) : null}
         </div>
       )}
       {earnedToday.length > 0 ? (
-        <ul className="mt-3 space-y-1">
+        <ul className="w-full space-y-1">
           {earnedToday.map((item) => {
             const copy = BADGES.find((badge) => badge.id === item.id);
             return (
@@ -87,6 +86,10 @@ export function TodayView({
   const firstName = profile.name.trim().split(" ")[0];
   const hello = firstName ? `${greeting(now)}, ${firstName}.` : `${greeting(now)}.`;
   const dateLabel = now.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+  const heroLabel = selected
+    ? `${selected.id === liveId ? "NOW" : "SELECTED"} · ${clockLabel(selected.time)}`
+    : "TODAY";
+  const heroDone = selected ? checkpointDone(selected.id) : false;
 
   if (!routine || list.length === 0) {
     return (
@@ -116,30 +119,41 @@ export function TodayView({
   return (
     <section className="px-5 py-6 sm:px-8 lg:px-12 lg:py-12">
       <header>
-        <p className="mb-2 text-xs font-bold uppercase tracking-[0.16em] text-quiet">
-          {dateLabel} <span className="text-lime">●</span> Your daily rhythm
-        </p>
-        <h1 className="text-3xl font-black tracking-[-0.04em] text-balance sm:text-5xl">{hello}</h1>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.16em] text-quiet">
+              {dateLabel} <span className="text-lime">●</span> Your daily rhythm
+            </p>
+            <h1 className="text-3xl font-black tracking-[-0.04em] text-balance sm:text-5xl">{hello}</h1>
+          </div>
+          <span
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-forest px-3 text-sm font-extrabold tabular-nums text-paper"
+            aria-label={`Streak: ${stats.streak} day${stats.streak === 1 ? "" : "s"}`}
+          >
+            <Flame size={14} className="text-lime" aria-hidden="true" />
+            {stats.streak}
+          </span>
+        </div>
         <CheckInCard />
       </header>
 
-      <div className="mt-9 grid gap-4 md:grid-cols-[1.1fr_0.9fr]">
-        <div className="flex items-center justify-between gap-4 rounded-3xl bg-forest p-6 text-paper sm:p-8">
-          <div className="flex min-w-0 items-start gap-4">
-            <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-lime text-forest">
-              <Target size={19} />
-            </span>
-            <div className="min-w-0">
-              <span className="text-sm text-mist">Today's progress</span>
-              <strong className="mt-1 block text-4xl tabular-nums">
-                {stats.todayDone}
-                <i className="text-lg font-normal text-mist"> / {stats.todayTotal}</i>
-              </strong>
-              <p className="mt-1 text-sm text-mist">
-                {remaining} remaining
-                {missed > 0 ? ` · ${missed} missed` : ""}
-              </p>
-            </div>
+      <div className="mt-6 rounded-3xl bg-[radial-gradient(120%_140%_at_100%_0%,var(--color-forest-mid)_0,var(--color-forest)_55%)] p-6 text-paper sm:p-8">
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[11px] font-black tracking-[0.14em] text-mist">{heroLabel}</p>
+            <h2 className="mt-2 truncate text-2xl font-black tracking-tight sm:text-3xl">
+              {selected ? selected.title : "Your day"}
+            </h2>
+            <p className="mt-1 text-sm text-mist">
+              <span className="tabular-nums">
+                {stats.todayDone} of {stats.todayTotal}
+              </span>{" "}
+              done · {remaining} remaining
+              {missed > 0 ? ` · ${missed} missed` : ""}
+            </p>
+            {selected?.description ? (
+              <p className="mt-2 line-clamp-2 max-w-md text-pretty text-sm leading-6 text-mist">{selected.description}</p>
+            ) : null}
           </div>
           <div
             className="grid size-24 shrink-0 place-items-center rounded-full"
@@ -151,22 +165,24 @@ export function TodayView({
             </div>
           </div>
         </div>
-
-        <div className="rounded-3xl border border-line bg-paper p-6 sm:p-8">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <Sparkles size={16} className="text-olive" />
-            Today's focus
-          </div>
-          <h2 className="mt-4 text-2xl font-black tracking-tight">{selected ? selected.title : "Your day"}</h2>
-          <p className="mt-2 text-pretty text-sm leading-6 text-quiet">
-            {selected?.description || "Turn this block into one visible improvement."}
-          </p>
-          {selected ? (
-            <a href="#checkpoint-detail" className="mt-4 inline-flex text-sm font-bold text-olive">
-              Open checkpoint →
+        {selected ? (
+          <div className="mt-5 flex gap-2">
+            <button
+              type="button"
+              onClick={() => toggleCheckpointDone(selected.id)}
+              aria-pressed={heroDone}
+              className="h-12 flex-1 rounded-full bg-lime text-sm font-bold text-forest"
+            >
+              {heroDone ? "Marked done" : "Mark done"}
+            </button>
+            <a
+              href="#checkpoint-detail"
+              className="inline-flex h-12 items-center rounded-full border border-paper/40 px-5 text-sm font-semibold"
+            >
+              Tasks
             </a>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-10 flex items-end justify-between gap-4">
@@ -177,15 +193,18 @@ export function TodayView({
       </div>
 
       {recoveryProposals.map((proposal) => (
-        <div key={proposal.checkpointId} className="mt-4 rounded-2xl bg-mist px-4 py-4">
-          <p className="text-sm leading-6 text-olive">{proposal.message}</p>
+        <div
+          key={proposal.checkpointId}
+          className="daymark-hatch mt-4 rounded-2xl border border-danger/25 bg-paper px-4 py-4"
+        >
+          <p className="text-sm leading-6 text-ink">{proposal.message}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {proposal.options.map((option) => (
               <button
                 key={option.id}
                 type="button"
                 onClick={() => acceptRecovery(option)}
-                className="min-h-11 rounded-xl bg-forest px-3 text-xs font-bold text-paper"
+                className="min-h-11 rounded-full bg-forest px-4 text-xs font-bold text-paper"
               >
                 {option.label}
               </button>
@@ -193,7 +212,7 @@ export function TodayView({
             <button
               type="button"
               onClick={() => dismissRecovery(proposal.checkpointId)}
-              className="min-h-11 rounded-xl border border-line bg-paper px-3 text-xs font-bold text-forest"
+              className="min-h-11 rounded-full border border-line bg-paper px-4 text-xs font-bold text-forest"
             >
               Leave it
             </button>
@@ -207,18 +226,40 @@ export function TodayView({
         </p>
       ) : null}
 
-      <div className="mt-4 space-y-2">
+      <ol className="relative mt-4 flex flex-col gap-2">
+        <span aria-hidden="true" className="absolute bottom-6 left-[1.375rem] top-6 w-0.5 bg-line" />
         {list.map((activity) => {
           const done = checkpointDone(activity.id);
           const active = selected?.id === activity.id;
+          const live = activity.id === liveId;
+          const missedRow = stats.missedIds.includes(activity.id) && !live && !done;
+          const nodeClass = done
+            ? "bg-lime text-forest"
+            : live
+              ? "border-4 border-lime bg-forest"
+              : missedRow
+                ? "daymark-hatch border-2 border-danger"
+                : "border-2 border-line bg-paper";
           return (
-            <div
-              key={activity.id}
-              className={`flex items-center gap-3 rounded-2xl border p-3 sm:gap-5 sm:p-4 ${
-                active ? "border-lime bg-cream shadow-sm" : "border-transparent bg-paper"
-              }`}
-            >
-              <button type="button" onClick={() => setSelectedId(activity.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left sm:gap-5">
+            <li key={activity.id} className="relative flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => toggleCheckpointDone(activity.id)}
+                aria-label={`Mark ${activity.title} done`}
+                aria-pressed={done}
+                className="relative z-10 grid size-11 shrink-0 place-items-center"
+              >
+                <span className={`grid size-7 place-items-center rounded-full ${nodeClass}`}>
+                  {done ? <Check size={14} strokeWidth={3} /> : null}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedId(activity.id)}
+                className={`flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-2xl border p-3 text-left sm:gap-5 sm:p-4 ${
+                  active ? "border-lime bg-cream shadow-sm" : "border-line bg-paper"
+                }`}
+              >
                 <span className="w-14 shrink-0 text-xs font-bold text-quiet sm:w-16">{clockLabel(activity.time)}</span>
                 <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-mist text-olive">
                   <CheckpointIcon name={activity.icon} className="size-4" />
@@ -228,12 +269,12 @@ export function TodayView({
                     <h3 className={`truncate text-sm font-bold sm:text-base ${done ? "text-soft line-through" : ""}`}>
                       {activity.title}
                     </h3>
-                    {activity.id === liveId ? (
+                    {live ? (
                       <span className="rounded-full bg-mist px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-olive">
                         now
                       </span>
                     ) : null}
-                    {stats.missedIds.includes(activity.id) && activity.id !== liveId ? (
+                    {stats.missedIds.includes(activity.id) && !live ? (
                       <span className="rounded-full bg-canvas px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-danger">
                         missed
                       </span>
@@ -250,20 +291,10 @@ export function TodayView({
                   </p>
                 </div>
               </button>
-              <button
-                type="button"
-                onClick={() => toggleCheckpointDone(activity.id)}
-                aria-label={`Mark ${activity.title} done`}
-                className={`grid size-11 shrink-0 place-items-center rounded-full border-2 ${
-                  done ? "border-lime bg-lime text-forest" : "border-line bg-paper text-transparent"
-                }`}
-              >
-                <Check size={16} strokeWidth={3} />
-              </button>
-            </div>
+            </li>
           );
         })}
-      </div>
+      </ol>
 
       {selected ? (
         <div className="mt-10 grid gap-4 md:grid-cols-[1.2fr_0.8fr]">

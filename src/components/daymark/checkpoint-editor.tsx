@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, Plus, Trash2, X } from "lucide-react";
 import { CHECKPOINT_ICONS } from "@/lib/daymark/icons";
 import { createId } from "@/lib/daymark/ids";
@@ -26,6 +26,14 @@ export function CheckpointEditor({ initial, onSave, onClose, onDelete }: Props) 
   const [draft, setDraft] = useState<Checkpoint>(initial);
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
 
   const toggleDay = (day: WeekDay) => {
     setDraft((value) => {
@@ -61,13 +69,21 @@ export function CheckpointEditor({ initial, onSave, onClose, onDelete }: Props) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-0 sm:items-center sm:p-6">
-      <div className="flex max-h-[94dvh] w-full max-w-lg flex-col rounded-t-3xl bg-paper shadow-xl sm:rounded-3xl">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="checkpoint-editor-title"
+        className="flex max-h-[94dvh] w-full max-w-lg flex-col rounded-t-[2rem] bg-paper shadow-xl sm:rounded-3xl"
+      >
+        <div aria-hidden="true" className="mx-auto mt-3 h-1 w-10 rounded-full bg-line sm:hidden" />
         <header className="flex items-center justify-between border-b border-line px-5 py-4">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-soft">Checkpoint</p>
-            <h2 className="text-lg font-bold">{initial.title.trim() ? "Edit checkpoint" : "Add checkpoint"}</h2>
+            <h2 id="checkpoint-editor-title" className="text-lg font-bold">
+              {initial.title.trim() ? "Edit checkpoint" : "Add checkpoint"}
+            </h2>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="grid size-11 place-items-center rounded-xl border border-line">
+          <button type="button" onClick={onClose} aria-label="Close" className="grid size-11 place-items-center rounded-full border border-line">
             <X size={18} />
           </button>
         </header>
@@ -77,9 +93,13 @@ export function CheckpointEditor({ initial, onSave, onClose, onDelete }: Props) 
             Title
             <input
               value={draft.title}
-              onChange={(event) => setDraft({ ...draft, title: event.target.value })}
+              onChange={(event) => {
+                setDraft({ ...draft, title: event.target.value });
+                if (error) setError("");
+              }}
               placeholder="Morning routine"
-              className="mt-2 h-12 w-full rounded-xl border border-line bg-canvas px-3 text-sm font-medium text-ink outline-none focus:border-lime"
+              aria-invalid={error ? true : undefined}
+              className="mt-2 h-12 w-full rounded-2xl border border-line bg-canvas px-4 text-sm font-medium text-ink outline-none focus:border-lime"
             />
           </label>
 
@@ -89,8 +109,11 @@ export function CheckpointEditor({ initial, onSave, onClose, onDelete }: Props) 
               <input
                 type="time"
                 value={draft.time}
-                onChange={(event) => setDraft({ ...draft, time: event.target.value })}
-                className="mt-2 h-12 w-full rounded-xl border border-line bg-canvas px-3 text-sm font-medium text-ink outline-none focus:border-lime"
+                onChange={(event) => {
+                  setDraft({ ...draft, time: event.target.value });
+                  if (error) setError("");
+                }}
+                className="mt-2 h-12 w-full rounded-2xl border border-line bg-canvas px-4 text-sm font-medium text-ink outline-none focus:border-lime"
               />
             </label>
             <label className="block text-xs font-bold text-quiet">
@@ -98,7 +121,8 @@ export function CheckpointEditor({ initial, onSave, onClose, onDelete }: Props) 
               <button
                 type="button"
                 onClick={() => setDraft({ ...draft, reminderEnabled: !draft.reminderEnabled })}
-                className={`mt-2 flex h-12 w-full items-center justify-between rounded-xl border px-3 text-sm font-bold ${
+                aria-pressed={draft.reminderEnabled}
+                className={`mt-2 flex h-12 w-full items-center justify-between rounded-2xl border px-4 text-sm font-bold ${
                   draft.reminderEnabled ? "border-lime bg-mist text-olive" : "border-line bg-canvas text-quiet"
                 }`}
               >
@@ -113,7 +137,7 @@ export function CheckpointEditor({ initial, onSave, onClose, onDelete }: Props) 
               value={draft.description ?? ""}
               onChange={(event) => setDraft({ ...draft, description: event.target.value })}
               placeholder="Optional note about this block"
-              className="mt-2 min-h-20 w-full resize-none rounded-xl border border-line bg-canvas p-3 text-sm font-medium outline-none focus:border-lime"
+              className="mt-2 min-h-20 w-full resize-none rounded-2xl border border-line bg-canvas p-4 text-sm font-medium outline-none focus:border-lime"
             />
           </label>
 
@@ -130,14 +154,14 @@ export function CheckpointEditor({ initial, onSave, onClose, onDelete }: Props) 
                       setDraft({ ...draft, tasks });
                     }}
                     placeholder="Improvement task"
-                    className="h-12 flex-1 rounded-xl border border-line bg-canvas px-3 text-sm outline-none focus:border-lime"
+                    className="h-12 min-w-0 flex-1 rounded-2xl border border-line bg-canvas px-4 text-sm outline-none focus:border-lime"
                   />
                   <button
                     type="button"
                     aria-label="Move task up"
                     disabled={index === 0}
                     onClick={() => moveTask(index, -1)}
-                    className="grid size-12 place-items-center rounded-xl border border-line text-quiet disabled:opacity-30"
+                    className="grid size-12 shrink-0 place-items-center rounded-full border border-line text-quiet disabled:opacity-30"
                   >
                     <ChevronUp size={16} />
                   </button>
@@ -146,7 +170,7 @@ export function CheckpointEditor({ initial, onSave, onClose, onDelete }: Props) 
                     aria-label="Move task down"
                     disabled={index === draft.tasks.length - 1}
                     onClick={() => moveTask(index, 1)}
-                    className="grid size-12 place-items-center rounded-xl border border-line text-quiet disabled:opacity-30"
+                    className="grid size-12 shrink-0 place-items-center rounded-full border border-line text-quiet disabled:opacity-30"
                   >
                     <ChevronDown size={16} />
                   </button>
@@ -154,7 +178,7 @@ export function CheckpointEditor({ initial, onSave, onClose, onDelete }: Props) 
                     type="button"
                     aria-label="Remove task"
                     onClick={() => setDraft({ ...draft, tasks: draft.tasks.filter((item) => item.id !== task.id) })}
-                    className="grid size-12 place-items-center rounded-xl border border-line text-quiet"
+                    className="grid size-12 shrink-0 place-items-center rounded-full border border-line text-quiet"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -163,7 +187,7 @@ export function CheckpointEditor({ initial, onSave, onClose, onDelete }: Props) 
               <button
                 type="button"
                 onClick={() => setDraft({ ...draft, tasks: [...draft.tasks, { id: createId("tk"), title: "" }] })}
-                className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line text-sm font-bold text-olive"
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-line text-sm font-bold text-olive"
               >
                 <Plus size={16} /> Add task
               </button>
@@ -180,7 +204,8 @@ export function CheckpointEditor({ initial, onSave, onClose, onDelete }: Props) 
                     key={day.id}
                     type="button"
                     onClick={() => toggleDay(day.id)}
-                    className={`h-11 flex-1 rounded-xl text-[11px] font-bold ${
+                    aria-pressed={selected}
+                    className={`h-11 flex-1 rounded-full text-[11px] font-bold ${
                       selected ? "bg-forest text-paper" : "bg-canvas text-quiet"
                     }`}
                   >
@@ -191,7 +216,7 @@ export function CheckpointEditor({ initial, onSave, onClose, onDelete }: Props) 
             </div>
           </div>
 
-          <label className="flex min-h-12 items-center justify-between rounded-xl bg-canvas px-3 text-sm font-bold">
+          <label className="flex min-h-12 items-center justify-between rounded-2xl bg-canvas px-4 text-sm font-bold">
             Enabled
             <input
               type="checkbox"
@@ -211,8 +236,9 @@ export function CheckpointEditor({ initial, onSave, onClose, onDelete }: Props) 
                     key={item.id}
                     type="button"
                     aria-label={item.label}
+                    aria-pressed={selected}
                     onClick={() => setDraft({ ...draft, icon: item.id })}
-                    className={`grid h-12 place-items-center rounded-xl border ${
+                    className={`grid h-12 place-items-center rounded-2xl border ${
                       selected ? "border-lime bg-mist text-olive" : "border-line bg-canvas text-ink"
                     }`}
                   >
@@ -223,21 +249,25 @@ export function CheckpointEditor({ initial, onSave, onClose, onDelete }: Props) 
             </div>
           </div>
 
-          {error ? <p className="text-sm font-medium text-danger">{error}</p> : null}
+          {error ? (
+            <p role="alert" className="text-sm font-medium text-danger">
+              {error}
+            </p>
+          ) : null}
 
           {onDelete ? (
             confirmDelete ? (
-              <div className="flex gap-2 rounded-xl bg-canvas p-3 text-sm">
+              <div className="flex gap-2 rounded-2xl bg-canvas p-3 text-sm">
                 <p className="flex-1 font-medium">Delete this checkpoint?</p>
-                <button type="button" onClick={() => setConfirmDelete(false)} className="font-bold text-quiet">
+                <button type="button" onClick={() => setConfirmDelete(false)} className="min-h-11 px-2 font-bold text-quiet">
                   No
                 </button>
-                <button type="button" onClick={onDelete} className="font-bold text-danger">
+                <button type="button" onClick={onDelete} className="min-h-11 px-2 font-bold text-danger">
                   Delete
                 </button>
               </div>
             ) : (
-              <button type="button" onClick={() => setConfirmDelete(true)} className="text-sm font-bold text-danger">
+              <button type="button" onClick={() => setConfirmDelete(true)} className="min-h-11 text-sm font-bold text-danger">
                 Delete checkpoint
               </button>
             )
@@ -245,10 +275,10 @@ export function CheckpointEditor({ initial, onSave, onClose, onDelete }: Props) 
         </div>
 
         <footer className="flex gap-3 border-t border-line p-4">
-          <button type="button" onClick={onClose} className="h-12 flex-1 rounded-xl border border-line text-sm font-bold">
+          <button type="button" onClick={onClose} className="h-12 flex-1 rounded-full border border-line text-sm font-bold">
             Cancel
           </button>
-          <button type="button" onClick={submit} className="h-12 flex-1 rounded-xl bg-forest text-sm font-bold text-paper">
+          <button type="button" onClick={submit} className="h-12 flex-1 rounded-full bg-forest text-sm font-bold text-paper">
             Save
           </button>
         </footer>
