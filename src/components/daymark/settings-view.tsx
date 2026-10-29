@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { alarmStatusLabel, deniedRecoveryCopy, isStandaloneDisplay, pushSupport, reminderUxCopy } from "@/lib/daymark/notifications";
 import { backupFilename } from "@/lib/daymark/backup";
 import { useDaymark } from "@/lib/daymark/store";
@@ -30,10 +30,32 @@ export function SettingsView() {
   const [confirm, setConfirm] = useState<null | "progress" | "routine" | "all" | "import">(null);
   const [backupMessage, setBackupMessage] = useState("");
   const [pendingImport, setPendingImport] = useState<string | null>(null);
+  const [nameDraft, setNameDraft] = useState(profile.name);
+  const [nameError, setNameError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const standalone = typeof window !== "undefined" && isStandaloneDisplay();
   const push = pushSupport();
   const copy = reminderUxCopy(capabilities, permission, settings.remindersEnabled);
+
+  useEffect(() => {
+    setNameDraft(profile.name);
+  }, [profile.name]);
+
+  const changeName = (value: string) => {
+    setNameDraft(value);
+    if (value.trim()) {
+      setNameError("");
+      updateProfile({ name: value });
+    } else {
+      setNameError("Name can't be empty.");
+    }
+  };
+
+  const finishNameEdit = () => {
+    if (nameDraft.trim()) return;
+    setNameDraft(profile.name);
+    setNameError("");
+  };
 
   const enableReminders = async () => {
     if (permission === "unsupported") return;
@@ -79,15 +101,27 @@ export function SettingsView() {
       <h1 className="mt-2 text-3xl font-black tracking-[-0.04em]">Your ROUTA</h1>
 
       <div className="mt-6 space-y-4">
-        <label className="block rounded-3xl border border-line bg-paper p-5 text-xs font-bold text-quiet">
-          Name
-          <input
-            value={profile.name}
-            onChange={(event) => updateProfile({ name: event.target.value })}
-            placeholder="What should we call you?"
-            className="mt-2 h-12 w-full rounded-2xl border border-line bg-canvas px-4 text-sm font-medium text-ink outline-none focus:border-lime"
-          />
-        </label>
+        <div className="rounded-3xl border border-line bg-paper p-5">
+          <label className="block text-xs font-bold text-quiet">
+            Name
+            <input
+              value={nameDraft}
+              onChange={(event) => changeName(event.target.value)}
+              onBlur={finishNameEdit}
+              placeholder="What should we call you?"
+              aria-invalid={nameError ? true : undefined}
+              aria-describedby={nameError ? "settings-name-error" : undefined}
+              className={`mt-2 h-12 w-full rounded-2xl border bg-canvas px-4 text-sm font-medium text-ink outline-none focus:border-lime ${
+                nameError ? "border-danger" : "border-line"
+              }`}
+            />
+          </label>
+          {nameError ? (
+            <p id="settings-name-error" role="alert" className="mt-2 text-xs font-semibold text-danger">
+              {nameError}
+            </p>
+          ) : null}
+        </div>
 
         <label className="block rounded-3xl border border-line bg-paper p-5 text-xs font-bold text-quiet">
           Routine name
