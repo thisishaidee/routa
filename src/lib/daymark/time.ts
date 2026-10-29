@@ -71,17 +71,20 @@ export function todaysCheckpoints(checkpoints: Checkpoint[], date = new Date()) 
   return sortCheckpoints(checkpoints.filter((item) => item.enabled && item.repeatDays.includes(day)));
 }
 
+/**
+ * The checkpoint that is "now". Compared in wrapped minutes, so a checkpoint
+ * between 00:00 and 04:59 counts as the end of the previous evening, not the
+ * start of the day. Before the first checkpoint of the day, the last one is
+ * returned.
+ */
 export function liveCheckpointId(checkpoints: Checkpoint[], date = new Date()) {
   const list = todaysCheckpoints(checkpoints, date);
   if (list.length === 0) return null;
-  const now = clockMinutes(date);
-  const first = sessionMinutes(list[0].time);
-  if (now < first) return list[list.length - 1].id;
+  const now = wrapMinutes(clockMinutes(date));
+  if (now < wrapMinutes(list[0].time)) return list[list.length - 1].id;
   let current = list[0].id;
   for (const item of list) {
-    const start = sessionMinutes(item.time);
-    if (start === 0 && now >= 5 * 60) continue;
-    if (start <= now) current = item.id;
+    if (wrapMinutes(item.time) <= now) current = item.id;
   }
   return current;
 }
