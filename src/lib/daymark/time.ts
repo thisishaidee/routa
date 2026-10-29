@@ -89,9 +89,20 @@ export function liveCheckpointId(checkpoints: Checkpoint[], date = new Date()) {
   return current;
 }
 
-/** True once this checkpoint's local time has been reached in the current rhythm day. */
+/**
+ * True once this checkpoint's local time has been reached today. The calendar
+ * date rolls over at 00:00, so between 00:00 and 04:59 only after-midnight
+ * checkpoints that have already passed can have started; the rest of the day's
+ * checkpoints are still ahead.
+ */
 export function hasStartedInDay(time: string, now = new Date()) {
-  return wrapMinutes(clockMinutes(now)) >= wrapMinutes(time);
+  const clock = clockMinutes(now);
+  const dawn = 5 * 60;
+  if (clock < dawn) {
+    const start = sessionMinutes(time);
+    return start < dawn && start <= clock;
+  }
+  return wrapMinutes(clock) >= wrapMinutes(time);
 }
 
 export function localDateAt(date: Date, hhmm: string) {

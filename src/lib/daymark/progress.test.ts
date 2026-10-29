@@ -96,6 +96,26 @@ describe("computeStreaks", () => {
   });
 });
 
+describe("computeStats just after midnight", () => {
+  const allDays = [0, 1, 2, 3, 4, 5, 6] as Checkpoint["repeatDays"];
+  const nightRoutine = routineOf([
+    checkpoint({ id: "workout", time: "06:00", title: "Workout", repeatDays: allDays }),
+    checkpoint({ id: "review", time: "21:30", title: "Review", repeatDays: allDays }),
+    checkpoint({ id: "night", time: "00:00", title: "Night build", repeatDays: allDays }),
+  ]);
+  const settings = { weekStartsOn: 1 as const, remindersEnabled: false };
+
+  it("does not count the morning as missed at 00:05", () => {
+    const stats = computeStats(nightRoutine, {}, new Date(2026, 9, 27, 0, 5), settings);
+    assert.deepEqual(stats.missedIds, ["night"]);
+  });
+
+  it("counts nothing as missed at 05:01 and the morning at 07:00", () => {
+    assert.deepEqual(computeStats(nightRoutine, {}, new Date(2026, 9, 27, 5, 1), settings).missedIds, []);
+    assert.deepEqual(computeStats(nightRoutine, {}, new Date(2026, 9, 27, 7, 0), settings).missedIds, ["workout"]);
+  });
+});
+
 describe("computeStats", () => {
   it("reports the same streak numbers as computeStreaks", () => {
     const now = new Date(2026, 9, 28, 8, 0);
