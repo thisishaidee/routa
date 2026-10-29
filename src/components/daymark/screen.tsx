@@ -60,11 +60,11 @@ export function DaymarkScreen({
     <main className="min-h-dvh bg-canvas text-ink">
       <div className="mx-auto flex max-w-6xl flex-col lg:flex-row">
         <aside className="hidden min-h-screen w-64 flex-col border-r border-line bg-cream p-7 lg:flex">
-          <div className="mb-16 flex items-center gap-2 text-lg font-bold tracking-tight">
+          <div className="mb-16 flex items-center gap-3 text-lg font-extrabold tracking-[0.14em]">
             <DaymarkMark />
-            routa
+            ROUTA
           </div>
-          <nav className="space-y-2 text-sm">
+          <nav className="space-y-2 text-sm" aria-label="Main">
             {NAV.map((item) => {
               const active = view === item.id;
               return (
@@ -72,8 +72,9 @@ export function DaymarkScreen({
                   key={item.id}
                   type="button"
                   onClick={() => onNavigate(item.id)}
-                  className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left ${
-                    active ? "bg-mist font-semibold" : "text-quiet"
+                  aria-current={active ? "page" : undefined}
+                  className={`flex min-h-12 w-full items-center gap-3 rounded-full px-5 text-left ${
+                    active ? "bg-lime font-bold text-forest" : "text-quiet"
                   }`}
                 >
                   <item.Icon size={16} />
@@ -88,7 +89,7 @@ export function DaymarkScreen({
             </span>
             <span className="text-xs">
               <b className="block">{profile.name.trim() || "Your rhythm"}</b>
-              <small className="text-quiet">{routine?.name || "Routa"}</small>
+              <small className="text-quiet">{routine?.name || "ROUTA"}</small>
             </span>
           </div>
         </aside>
@@ -102,14 +103,17 @@ export function DaymarkScreen({
           {view === "settings" ? <SettingsView /> : null}
 
           <footer className="hidden justify-between border-t border-line px-12 py-5 text-[11px] text-soft lg:flex">
-            <span>routa · build your rhythm</span>
+            <span>ROUTA · build your rhythm</span>
             <span>Reminders fire while this page is open.</span>
           </footer>
         </div>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-paper/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
-        <div className="grid grid-cols-4">
+      <nav
+        className="fixed inset-x-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 rounded-full bg-forest p-2 shadow-lg lg:hidden"
+        aria-label="Main"
+      >
+        <div className="flex items-center justify-between gap-1">
           {NAV.map((item) => {
             const active = view === item.id;
             return (
@@ -117,12 +121,13 @@ export function DaymarkScreen({
                 key={item.id}
                 type="button"
                 onClick={() => onNavigate(item.id)}
-                className={`flex min-h-14 flex-col items-center justify-center gap-1 text-[10px] font-bold ${
-                  active ? "text-forest" : "text-quiet"
+                aria-current={active ? "page" : undefined}
+                className={`flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full text-xs font-bold ${
+                  active ? "bg-lime px-4 text-forest" : "text-paper/75"
                 }`}
               >
                 <item.Icon size={18} />
-                {item.label}
+                <span className={active ? "" : "sr-only"}>{item.label}</span>
               </button>
             );
           })}
