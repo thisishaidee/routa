@@ -2,23 +2,47 @@ import { useDaymark } from "@/lib/daymark/store";
 import { BADGES } from "@/lib/daymark/checkins";
 
 export function ProgressView() {
-  const { stats, note, notes, insights, suggestions, health, checkInStreak, badges, checkInHistory } = useDaymark();
+  const { stats, note, notes, insights, suggestions, health, checkInStreak, badges, checkInHistory, today } = useDaymark();
   const history = Object.entries(notes)
     .filter(([, text]) => text.trim())
     .sort(([a], [b]) => (a < b ? 1 : -1))
     .slice(0, 5);
+  const weekSlice = stats.weekPercent * 3.6;
 
   return (
     <section className="px-5 py-6 sm:px-8 lg:px-12 lg:py-12">
       <p className="text-xs font-bold uppercase tracking-[0.16em] text-quiet">Progress</p>
       <h1 className="mt-2 text-3xl font-black tracking-[-0.04em]">Your week</h1>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+      <div className="mt-6 flex items-center justify-between gap-4 rounded-3xl bg-lime p-6 text-forest">
+        <div className="min-w-0">
+          <p className="text-xs font-black tracking-[0.12em]">ROUTINE STREAK</p>
+          <p className="mt-1 text-6xl font-black leading-none tracking-tight tabular-nums">
+            {stats.streak}
+            <span className="ml-1 text-base font-bold tracking-normal">day{stats.streak === 1 ? "" : "s"}</span>
+          </p>
+          <p className="mt-2 text-sm font-semibold">
+            Best {stats.bestStreak} · {stats.completedDays} finished days
+          </p>
+        </div>
+        <div
+          role="img"
+          aria-label={`${stats.weekPercent}% of this week completed`}
+          className="grid size-24 shrink-0 place-items-center rounded-full"
+          style={{ background: `conic-gradient(var(--color-forest) ${weekSlice}deg, rgb(31 61 44 / 0.15) ${weekSlice}deg)` }}
+        >
+          <div className="grid size-[76px] place-items-center rounded-full bg-lime text-center">
+            <b className="tabular-nums">{stats.weekPercent}%</b>
+            <small className="block text-[9px] font-bold">this week</small>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-3">
         <Stat label="Today" value={`${stats.todayDone} / ${stats.todayTotal}`} hint="completed of planned" />
         <Stat label="Remaining" value={String(stats.todayRemaining)} hint={`${stats.todayMissed} missed`} />
         <Stat label="Tasks" value={`${stats.todayTasksDone} / ${stats.todayTasksTotal}`} hint="checked today" />
-        <Stat label="This week" value={`${stats.weekDone} / ${stats.weekTotal}`} hint={`${stats.weekPercent}% completed of planned`} />
-        <Stat label="Routine streak" value={String(stats.streak)} hint={`best ${stats.bestStreak} · ${stats.completedDays} finished days`} />
+        <Stat label="This week" value={`${stats.weekDone} / ${stats.weekTotal}`} hint="completed of planned" />
         <Stat label="Check-in" value={String(checkInStreak.current)} hint={`best ${checkInStreak.best} · ${checkInStreak.total} days`} />
         <Stat label="Completed" value={String(stats.lifetimeDone)} hint="checkpoints all time" />
       </div>
@@ -118,20 +142,32 @@ export function ProgressView() {
               <div key={row.checkpoint.id} className="flex items-center gap-2">
                 <p className="min-w-0 flex-1 truncate text-sm font-bold">{row.checkpoint.title}</p>
                 <div className="flex shrink-0 items-center gap-1">
-                  {row.cells.map((cell) => (
-                    <span
-                      key={cell.dateKey}
-                      className={`size-8 rounded-full sm:size-9 ${
-                        !cell.scheduled ? "bg-canvas" : cell.done ? "bg-olive" : "bg-mist"
-                      }`}
-                      aria-label={`${row.checkpoint.title} ${cell.label} ${cell.done ? "done" : cell.scheduled ? "open" : "off"}`}
-                    />
-                  ))}
+                  {row.cells.map((cell) => {
+                    const missed = cell.scheduled && !cell.done && cell.dateKey < today;
+                    const state = cell.done ? "done" : missed ? "missed" : cell.scheduled ? "open" : "off";
+                    return (
+                      <span
+                        key={cell.dateKey}
+                        className={`size-8 rounded-full sm:size-9 ${
+                          state === "done"
+                            ? "bg-olive"
+                            : state === "missed"
+                              ? "daymark-hatch border border-danger/40"
+                              : state === "open"
+                                ? "bg-mist"
+                                : "bg-canvas"
+                        }`}
+                        aria-label={`${row.checkpoint.title} ${cell.label} ${state}`}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             ))}
           </div>
-          <p className="mt-5 text-[11px] font-bold text-quiet">Filled = completed · Pale = scheduled · Empty = off that day</p>
+          <p className="mt-5 text-[11px] font-bold text-quiet">
+            Solid = done · Hatched = missed · Pale = still to come · Empty = off that day
+          </p>
         </div>
       )}
 
@@ -159,10 +195,10 @@ export function ProgressView() {
 
 function Stat({ label, value, hint }: { label: string; value: string; hint: string }) {
   return (
-    <div className="rounded-3xl bg-forest p-5 text-paper">
-      <p className="text-xs font-bold uppercase tracking-[0.16em] text-mist">{label}</p>
-      <p className="mt-2 text-3xl font-black tabular-nums">{value}</p>
-      <p className="mt-1 text-xs text-mist">{hint}</p>
+    <div className="rounded-3xl border border-line bg-paper p-5">
+      <p className="text-xs font-bold uppercase tracking-[0.16em] text-quiet">{label}</p>
+      <p className="mt-2 text-3xl font-black tabular-nums text-ink">{value}</p>
+      <p className="mt-1 text-xs text-quiet">{hint}</p>
     </div>
   );
 }
