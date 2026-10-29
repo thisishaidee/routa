@@ -76,6 +76,45 @@ function isDayComplete(list: Checkpoint[], day: DayProgress) {
   return list.length > 0 && list.every((item) => isDone(day, item.id));
 }
 
+export interface StreakSummary {
+  streak: number;
+  bestStreak: number;
+  completedDays: number;
+}
+
+/**
+ * Streak rules:
+ * - A day counts when every checkpoint scheduled that day is done.
+ * - A day with nothing scheduled is skipped. It neither extends nor breaks a streak.
+ * - Today is skipped while it is unfinished. It adds one once it is complete.
+ * - Any earlier scheduled day that was not completed ends the current streak.
+ */
+export function computeStreaks(routine: Routine, progress: ProgressMap, now: Date): StreakSummary {
+  let current = 0;
+  let counting = true;
+  let run = 0;
+  let best = 0;
+  let completedDays = 0;
+  for (let offset = 0; offset < 365; offset += 1) {
+    const date = addDays(now, -offset);
+    const list = todaysCheckpoints(routine.checkpoints, date);
+    if (list.length === 0) continue;
+    const day = progress[isoFromDate(date)] ?? { completedCheckpointIds: [], completedTaskIds: {} };
+    if (isDayComplete(list, day)) {
+      completedDays += 1;
+      run += 1;
+      if (run > best) best = run;
+      if (counting) current += 1;
+    } else if (offset === 0) {
+      continue;
+    } else {
+      run = 0;
+      counting = false;
+    }
+  }
+  return { streak: current, bestStreak: Math.max(best, current), completedDays };
+}
+
 export function computeStats(
   routine: Routine | null,
   progress: ProgressMap,
@@ -154,42 +193,7 @@ export function computeStats(
     lifetimeDone += day.completedCheckpointIds.length;
   }
 
-  let streak = 0;
-  let bestStreak = 0;
-  let run = 0;
-  let completedDays = 0;
-  for (let offset = 0; offset < 365; offset += 1) {
-    const date = addDays(now, -offset);
-    const list = todaysCheckpoints(routine.checkpoints, date);
-    if (list.length === 0) {
-      run = 0;
-      continue;
-    }
-    const key = isoFromDate(date);
-    const map = progress[key] ?? { completedCheckpointIds: [], completedTaskIds: {} };
-    if (isDayComplete(list, map)) {
-      completedDays += 1;
-      run += 1;
-      if (run > bestStreak) bestStreak = run;
-    } else {
-      run = 0;
-    }
-  }
-
-  for (let offset = 0; offset < 365; offset += 1) {
-    const date = addDays(now, -offset);
-    const list = todaysCheckpoints(routine.checkpoints, date);
-    if (list.length === 0) {
-      if (offset === 0) continue;
-      break;
-    }
-    const key = isoFromDate(date);
-    const map = progress[key] ?? { completedCheckpointIds: [], completedTaskIds: {} };
-    if (!isDayComplete(list, map)) break;
-    streak += 1;
-  }
-
-  if (streak > bestStreak) bestStreak = streak;
+  const { streak, bestStreak, completedDays } = computeStreaks(routine, progress, now);
 
   return {
     todayDone,
