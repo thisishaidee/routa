@@ -357,7 +357,10 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!ready || !routine) return;
-    void getAlarmScheduler().sync(routine.checkpoints, settings, routine.id);
+    void getAlarmScheduler()
+      .sync(routine.checkpoints, settings, routine.id)
+      .then((result) => recordStorageResult("alarms", !result.skipped.some((item) => item.reason === "failed")))
+      .catch(() => recordStorageResult("alarms", false));
   }, [ready, routine, settings, permission, timeZone]);
 
   useEffect(() => {
