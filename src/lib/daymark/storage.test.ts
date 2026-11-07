@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { applySnapshot, STORAGE_KEYS } from "./storage";
+import { applySnapshot, clearV2Storage, STORAGE_KEYS } from "./storage";
 import type { DaymarkSnapshot } from "./types";
 
 const snapshot: DaymarkSnapshot = {
@@ -11,14 +11,14 @@ const snapshot: DaymarkSnapshot = {
   settings: { weekStartsOn: 1, remindersEnabled: true },
 };
 
-function memoryStorage(seed: Record<string, string> = {}, failKey?: string): Storage {
+function memoryStorage(seed: Record<string, string> = {}, failKey?: string, failRemoveKey?: string): Storage {
   const values = new Map(Object.entries(seed));
   return {
     get length() { return values.size; },
     clear() { values.clear(); },
     getItem(key: string) { return values.get(key) ?? null; },
     key(index: number) { return [...values.keys()][index] ?? null; },
-    removeItem(key: string) { values.delete(key); },
+    removeItem(key: string) { if (key === failRemoveKey) throw new Error("storage unavailable"); values.delete(key); },
     setItem(key: string, value: string) {
       if (key === failKey && value !== "previous-progress") throw new Error("quota exceeded");
       values.set(key, String(value));
@@ -104,6 +104,38 @@ describe("complete backup restore persistence", () => {
     };
     const storage = memoryStorage(seed, RECOVERY_KEY);
     const result = withStorage(storage, () => applySnapshot(snapshot, { checkIns, recovery }));
+    assert.equal(result.ok, false);
+    for (const [key, value] of Object.entries(seed)) {
+      assert.equal(storage.getItem(key), value, `preserves ${key}`);
+    }
+  });
+});
+
+
+describe("clear local data safety", () => {
+  it("clears ROUTA data and legacy notes but leaves unrelated storage untouched", () => {
+    const storage = memoryStorage({
+      [STORAGE_KEYS.profile]: "profile",
+      [STORAGE_KEYS.routine]: "routine",
+      "routa:v2:alarms": "alarms",
+      "daymark-note-2026-11-07": "legacy note",
+      unrelated: "keep",
+    });
+    const result = withStorage(storage, () => clearV2Storage());
+    assert.deepEqual(result, { ok: true });
+    assert.equal(storage.getItem(STORAGE_KEYS.profile), null);
+    assert.equal(storage.getItem("daymark-note-2026-11-07"), null);
+    assert.equal(storage.getItem("unrelated"), "keep");
+  });
+
+  it("restores previously stored values when any removal fails", () => {
+    const seed = {
+      [STORAGE_KEYS.profile]: "profile",
+      [STORAGE_KEYS.routine]: "routine",
+      [STORAGE_KEYS.progress]: "progress",
+    };
+    const storage = memoryStorage(seed, undefined, STORAGE_KEYS.progress);
+    const result = withStorage(storage, () => clearV2Storage());
     assert.equal(result.ok, false);
     for (const [key, value] of Object.entries(seed)) {
       assert.equal(storage.getItem(key), value, `preserves ${key}`);
