@@ -54,7 +54,9 @@ begin
   if v_user_id is null then
     raise exception 'Authentication required' using errcode = '28000';
   end if;
-  if p_expected_revision < 0 or p_schema_version < 1 or jsonb_typeof(p_payload) <> 'object' then
+  if p_expected_revision is null or p_expected_revision < 0
+     or p_schema_version is null or p_schema_version < 1
+     or p_payload is null or jsonb_typeof(p_payload) <> 'object' then
     raise exception 'Invalid workspace payload' using errcode = '22023';
   end if;
 
