@@ -14,7 +14,7 @@ export function ProgressView() {
       <p className="text-xs font-bold uppercase tracking-[0.16em] text-quiet">Progress</p>
       <h1 className="mt-2 text-3xl font-black tracking-[-0.04em]">Your week</h1>
 
-      <div className="mt-6 flex items-center justify-between gap-4 rounded-3xl bg-lime p-6 text-forest">
+      <div className="mt-6 flex items-center justify-between gap-4 rounded-2xl bg-mist p-6 text-forest">
         <div className="min-w-0">
           <p className="text-xs font-black tracking-[0.12em]">ROUTINE STREAK</p>
           <p className="mt-1 text-6xl font-black leading-none tracking-tight tabular-nums">
@@ -50,14 +50,14 @@ export function ProgressView() {
         Planned versus completed uses only checkpoints you scheduled and marked done. Missed means the time passed and it is still open.
       </p>
 
-      <section className="mt-8 rounded-3xl border border-line bg-paper p-6">
+      <section className="mt-8 rounded-2xl border-0 bg-cream p-6">
         <p className="text-[10px] font-black tracking-[0.18em] text-soft">RHYTHM HEALTH</p>
         <h2 className="mt-2 text-2xl font-black">{health.label}</h2>
         <p className="mt-2 text-pretty text-sm leading-6 text-quiet">{health.detail}</p>
         <p className="mt-3 text-xs text-quiet">A finished day means every scheduled checkpoint was completed.</p>
       </section>
 
-      <section className="mt-4 rounded-3xl border border-line bg-paper p-6">
+      <section className="mt-4 rounded-2xl border-0 bg-cream p-6">
         <p className="text-[10px] font-black tracking-[0.18em] text-soft">BADGES</p>
         {badges.length === 0 ? (
           <p className="mt-3 text-pretty text-sm leading-6 text-quiet">Badges show up here only after you earn them.</p>
@@ -73,7 +73,7 @@ export function ProgressView() {
         )}
       </section>
 
-      <section className="mt-4 rounded-3xl border border-line bg-paper p-6">
+      <section className="mt-4 rounded-2xl border-0 bg-cream p-6">
         <p className="text-[10px] font-black tracking-[0.18em] text-soft">CHECK-IN HISTORY</p>
         {checkInHistory.length === 0 ? (
           <p className="mt-3 text-sm text-quiet">No check-ins yet.</p>
@@ -90,7 +90,7 @@ export function ProgressView() {
         )}
       </section>
 
-      <section className="mt-4 rounded-3xl border border-line bg-paper p-6">
+      <section className="mt-4 rounded-2xl border-0 bg-cream p-6">
         <p className="text-[10px] font-black tracking-[0.18em] text-soft">INTELLIGENCE</p>
         <p className="mt-2 text-pretty text-sm leading-6 text-quiet">
           Only from checkpoints you scheduled and marked done. No guessed reasons.
@@ -128,7 +128,7 @@ export function ProgressView() {
           <p className="mt-2 text-sm text-quiet">Add checkpoints and this week will fill in as you complete them.</p>
         </div>
       ) : (
-        <div className="mt-8 rounded-3xl border border-line bg-paper p-5">
+        <div className="mt-8 rounded-2xl border-0 bg-cream p-5">
           <div className="mb-4 flex items-center justify-end gap-1 text-[10px] font-bold uppercase tracking-wide text-quiet">
             <span className="mr-auto hidden sm:block">Checkpoint</span>
             {stats.weekDays.map((day) => (
@@ -171,7 +171,7 @@ export function ProgressView() {
         </div>
       )}
 
-      <section className="mt-8 rounded-3xl border border-line bg-paper p-6">
+      <section className="mt-8 rounded-2xl border-0 bg-cream p-6">
         <h2 className="text-xl font-black">Notes</h2>
         {note.trim() ? (
           <p className="mt-3 whitespace-pre-wrap text-pretty text-sm leading-6 text-quiet">{note}</p>
@@ -195,7 +195,7 @@ export function ProgressView() {
 
 function Stat({ label, value, hint }: { label: string; value: string; hint: string }) {
   return (
-    <div className="rounded-3xl border border-line bg-paper p-5">
+    <div className="rounded-2xl border-0 bg-cream p-5">
       <p className="text-xs font-bold uppercase tracking-[0.16em] text-quiet">{label}</p>
       <p className="mt-2 text-3xl font-black tabular-nums text-ink">{value}</p>
       <p className="mt-1 text-xs text-quiet">{hint}</p>
