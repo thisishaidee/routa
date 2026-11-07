@@ -443,6 +443,45 @@ describe("reboot, timezone, reinstall, devices", () => {
   });
 });
 
+describe("safe cancellation", () => {
+  it("does not clear reminder records when native cancellation fails", async () => {
+    const record = {
+      ...desiredFrom(checkpoint()),
+      platform: "android" as const,
+      schedulingState: "scheduled" as const,
+      lastSyncAt: new Date().toISOString(),
+    };
+    const registry = createMemoryRegistry([record]);
+    const native = mockNative();
+    native.cancel = async () => { throw new Error("native cancellation failed"); };
+    const scheduler = createAlarmScheduler({
+      platform: "android",
+      registry,
+      native,
+      permission: () => "granted",
+      capabilities: () => ({ ...webCaps(), platform: "android", exactAlarms: true, alarmManager: true, webPush: "unsupported" }),
+    });
+    await assert.rejects(() => scheduler.cancelAll(), /could not cancel every device reminder/);
+    assert.equal(scheduler.getScheduledAlarms().length, 1);
+  });
+
+  it("does not claim success when the reminder registry cannot be cleared", async () => {
+    const memory = createMemoryRegistry();
+    const registry = {
+      read: () => memory.read(),
+      write: (records: Parameters<typeof memory.write>[0]) => memory.write(records),
+      clear: () => false,
+    };
+    const scheduler = createAlarmScheduler({
+      platform: "web",
+      registry,
+      native: null,
+      permission: () => "granted",
+    });
+    await assert.rejects(() => scheduler.cancelAll(), /could not be cleared/);
+  });
+});
+
 describe("fallback", () => {
   it("uses page notifications only for failed native schedules when exact alarms exist", () => {
     assert.equal(shouldUseFallbackNotification(true, "scheduled"), false);
