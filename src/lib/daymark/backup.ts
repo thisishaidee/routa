@@ -75,9 +75,22 @@ export function parseBackup(raw: string): {
     return { ok: false, error: "This file does not contain ROUTA backup data." };
   }
 
+  // Reject malformed supplied sections instead of silently coercing them to empty defaults.
+  for (const field of ["profile", "progress", "notes", "settings"] as const) {
+    if (Object.prototype.hasOwnProperty.call(nested, field) && !isRecord(nested[field])) {
+      return { ok: false, error: `The ${field} data in that backup could not be read.` };
+    }
+  }
+
   const snapshot = coerceSnapshot(nested);
-  if (Object.prototype.hasOwnProperty.call(nested, "routine") && nested.routine !== null && !snapshot.routine) {
-    return { ok: false, error: "The routine in that backup could not be read." };
+  if (Object.prototype.hasOwnProperty.call(nested, "routine")) {
+    if (nested.routine !== null && !snapshot.routine) {
+      return { ok: false, error: "The routine in that backup could not be read." };
+    }
+    if (isRecord(nested.routine) && Array.isArray(nested.routine.checkpoints)
+      && snapshot.routine?.checkpoints.length !== nested.routine.checkpoints.length) {
+      return { ok: false, error: "Some checkpoints in that backup could not be read." };
+    }
   }
 
   if (parsed.checkIns !== undefined && !isRecord(parsed.checkIns)) {
