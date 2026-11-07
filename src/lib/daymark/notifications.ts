@@ -36,7 +36,15 @@ export interface ReminderTick {
 }
 
 export function tickReminders(input: ReminderTick, date = new Date()) {
-  if (getAlarmScheduler().canExactAlarm()) return;
+  const scheduler = getAlarmScheduler();
+  const exactAlarmsAvailable = scheduler.canExactAlarm();
+  const fallbackIds = new Set(
+    scheduler.getScheduledAlarms()
+      .filter((record) => record.schedulingState === "fallback")
+      .map((record) => record.checkpointId),
+  );
+  if (exactAlarmsAvailable && fallbackIds.size === 0) return;
+  if (typeof Notification === "undefined") return;
   const permission = input.permission ?? reminderPermission();
   const due = dueNow({
     checkpoints: input.checkpoints,
@@ -45,10 +53,12 @@ export function tickReminders(input: ReminderTick, date = new Date()) {
     permission,
   });
   for (const item of due) {
+    // If native exact alarms are available, only notify for checkpoints whose
+    // individual native schedule failed. Healthy OS alarms must not duplicate.
+    if (exactAlarmsAvailable && !fallbackIds.has(item.checkpoint.id)) continue;
     if (alreadyFired(date, item.checkpoint.id)) continue;
     markFired(date, item.checkpoint.id);
     try {
-      if (typeof Notification === "undefined") return;
       const worker = typeof navigator !== "undefined" ? navigator.serviceWorker?.controller : null;
       if (worker) {
         worker.postMessage({
