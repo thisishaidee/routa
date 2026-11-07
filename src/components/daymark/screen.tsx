@@ -27,7 +27,7 @@ export function DaymarkScreen({
   view: DaymarkView;
   onNavigate: (view: DaymarkView) => void;
 }) {
-  const { ready, entered, enterApp, profile, routine, saveCheckpoint, deleteCheckpoint } = useDaymark();
+  const { ready, storageWarning, entered, enterApp, profile, routine, saveCheckpoint, deleteCheckpoint } = useDaymark();
   const [editing, setEditing] = useState<Checkpoint | null>(null);
 
   if (!ready || !entered) {
@@ -58,6 +58,11 @@ export function DaymarkScreen({
 
   return (
     <main className="min-h-dvh bg-canvas text-ink">
+      {storageWarning ? (
+        <div role="alert" className="border-b border-danger/30 bg-danger/10 px-5 py-3 text-sm text-danger sm:px-8 lg:px-12">
+          {storageWarning}
+        </div>
+      ) : null}
       <div className="mx-auto flex max-w-6xl flex-col lg:flex-row">
         <aside className="hidden min-h-screen w-56 flex-col border-r border-line bg-cream p-7 lg:flex">
           <div className="mb-16 flex items-center gap-3 text-lg font-extrabold tracking-[0.14em]">
