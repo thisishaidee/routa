@@ -329,7 +329,7 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!ready || !routine) return;
-    if (getAlarmScheduler().canExactAlarm()) return;
+    // tickReminders handles per-checkpoint fallback when a native schedule fails.
     const fire = () => tickReminders({ checkpoints: todayCheckpoints, settings, permission });
     fire();
     const tick = window.setInterval(fire, 15000);
