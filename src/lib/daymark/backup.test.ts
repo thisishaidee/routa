@@ -63,7 +63,7 @@ describe("ROUTA backup validation", () => {
 describe("complete ROUTA backup data", () => {
   it("preserves check-ins, badges, and recovery records", () => {
     const checkIns = {
-      checkIns: [{ date: "2026-11-07", startedAt: "2026-11-07T07:00:00.000Z" }],
+      checkIns: [{ date: "2026-11-07", startedAt: "2026-11-07T07:00:00.000Z", closedAt: undefined }],
       badges: [{ id: "first-check-in" as const, earnedOn: "2026-11-07", earnedAt: "2026-11-07T07:00:00.000Z" }],
     };
     const recovery = {
