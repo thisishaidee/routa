@@ -55,6 +55,47 @@ function validSnapshotSection(field: (typeof SNAPSHOT_FIELDS)[number], value: un
     && (value.remindersEnabled === undefined || typeof value.remindersEnabled === "boolean");
 }
 
+function validDateKey(value: unknown): value is string {
+  if (typeof value !== "string" || !DATE_KEY.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+
+function validTimestamp(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0 && Number.isFinite(Date.parse(value));
+}
+
+function validCheckIns(value: unknown): value is CheckInState {
+  if (!isRecord(value) || !Array.isArray(value.checkIns) || !Array.isArray(value.badges)) return false;
+  const validBadgeIds = new Set([
+    "first-check-in", "first-routine-completed", "check-in-streak-3",
+    "consistency-7", "milestone-30", "first-full-day",
+  ]);
+  return value.checkIns.every((item) => isRecord(item)
+      && validDateKey(item.date)
+      && (item.startedAt === undefined || validTimestamp(item.startedAt))
+      && (item.closedAt === undefined || validTimestamp(item.closedAt))
+      && (item.startedAt !== undefined || item.closedAt !== undefined))
+    && value.badges.every((item) => isRecord(item)
+      && typeof item.id === "string" && validBadgeIds.has(item.id)
+      && validDateKey(item.earnedOn) && validTimestamp(item.earnedAt));
+}
+
+function validRecovery(value: unknown): value is RecoveryState {
+  if (!isRecord(value) || !Array.isArray(value.moves) || !Array.isArray(value.dismissed)) return false;
+  return value.moves.every((item) => isRecord(item)
+      && typeof item.routineId === "string" && item.routineId.length > 0
+      && validDateKey(item.date)
+      && typeof item.checkpointId === "string" && item.checkpointId.length > 0
+      && typeof item.fromTime === "string" && TIME_VALUE.test(item.fromTime)
+      && typeof item.time === "string" && TIME_VALUE.test(item.time)
+      && validTimestamp(item.createdAt))
+    && value.dismissed.every((item) => isRecord(item)
+      && validDateKey(item.date)
+      && typeof item.checkpointId === "string" && item.checkpointId.length > 0);
+}
+
 export interface BackupExtras {
   checkIns?: CheckInState;
   recovery?: RecoveryState;
@@ -130,10 +171,10 @@ export function parseBackup(raw: string): {
 
   const snapshot = coerceSnapshot(nested);
 
-  if (parsed.checkIns !== undefined && !isRecord(parsed.checkIns)) {
+  if (parsed.checkIns !== undefined && !validCheckIns(parsed.checkIns)) {
     return { ok: false, error: "The check-in history in that backup could not be read." };
   }
-  if (parsed.recovery !== undefined && !isRecord(parsed.recovery)) {
+  if (parsed.recovery !== undefined && !validRecovery(parsed.recovery)) {
     return { ok: false, error: "The recovery history in that backup could not be read." };
   }
 
