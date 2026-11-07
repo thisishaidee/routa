@@ -12,7 +12,7 @@ function CheckInCard() {
   const earnedToday = badges.filter((item) => item.earnedOn === today);
 
   return (
-    <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-paper px-4 py-3">
+    <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border-0 bg-cream px-4 py-3">
       <p className="text-sm text-quiet">
         <b className="text-ink">Check-in</b> · streak {checkInStreak.current}
         {checkInStreak.best > 0 ? ` · best ${checkInStreak.best}` : ""}
@@ -137,7 +137,7 @@ export function TodayView({
         <CheckInCard />
       </header>
 
-      <div className="mt-6 rounded-3xl bg-[radial-gradient(120%_140%_at_100%_0%,var(--color-forest-mid)_0,var(--color-forest)_55%)] p-6 text-paper sm:p-8">
+      <div className="mt-6 rounded-2xl bg-[radial-gradient(120%_140%_at_100%_0%,var(--color-forest-mid)_0,var(--color-forest)_55%)] p-6 text-paper sm:p-8">
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[11px] font-black tracking-[0.14em] text-mist">{heroLabel}</p>
@@ -256,8 +256,8 @@ export function TodayView({
               <button
                 type="button"
                 onClick={() => setSelectedId(activity.id)}
-                className={`flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-2xl border p-3 text-left sm:gap-5 sm:p-4 ${
-                  active ? "border-lime bg-cream shadow-sm" : "border-line bg-paper"
+                className={`flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-xl border p-3 text-left sm:gap-5 sm:p-4 ${
+                  active ? "border-forest bg-cream shadow-sm" : "border-transparent bg-paper"
                 }`}
               >
                 <span className="w-14 shrink-0 text-xs font-bold text-quiet sm:w-16">{clockLabel(activity.time)}</span>
@@ -298,7 +298,7 @@ export function TodayView({
 
       {selected ? (
         <div className="mt-10 grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
-          <section id="checkpoint-detail" className="rounded-3xl border border-line bg-paper p-6 sm:p-8">
+          <section id="checkpoint-detail" className="rounded-2xl border-0 bg-cream p-6 sm:p-8">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[10px] font-black tracking-[0.18em] text-soft">CHECKPOINT</p>
@@ -356,7 +356,7 @@ export function TodayView({
             </label>
           </section>
 
-          <section className="rounded-3xl bg-mist p-6 sm:p-8">
+          <section className="rounded-2xl bg-mist p-6 sm:p-8">
             <p className="text-[10px] font-black tracking-[0.18em] text-olive">KEEP GOING</p>
             <h2 className="mt-2 text-2xl font-black">Momentum</h2>
             <strong className="mt-7 block text-5xl font-black tabular-nums">
