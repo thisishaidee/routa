@@ -599,6 +599,7 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
       return cleared;
     }
     const sessionCleared = clearSessionEntered();
+    setMigrationBlocked(false);
     setProfile(DEFAULT_PROFILE);
     setRoutine(null);
     setProgress({});
