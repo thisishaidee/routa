@@ -119,7 +119,9 @@ export function createAlarmScheduler(deps: AlarmSchedulerDeps): AlarmScheduler {
     if (!alarm.enabled) {
       await cancelNative(alarm.alarmId);
       const cancelled = recordOf(alarm, "cancelled");
-      registry.write(registry.read().filter((item) => item.alarmId !== alarm.alarmId));
+      if (!registry.write(registry.read().filter((item) => item.alarmId !== alarm.alarmId))) {
+        return { ...cancelled, schedulingState: "failed", lastError: "Reminder status could not be saved on this device." };
+      }
       return cancelled;
     }
 
@@ -172,7 +174,9 @@ export function createAlarmScheduler(deps: AlarmSchedulerDeps): AlarmScheduler {
 
     const stale = current.filter((item) => !desiredIds.has(item.alarmId)).map((item) => item.alarmId);
     if (stale.length) {
-      registry.write(current.filter((item) => !stale.includes(item.alarmId)));
+      if (!registry.write(current.filter((item) => !stale.includes(item.alarmId)))) {
+        throw new Error("Outdated reminder records could not be cleared from this device.");
+      }
     }
 
     for (const alarm of alarms) {
@@ -212,7 +216,9 @@ export function createAlarmScheduler(deps: AlarmSchedulerDeps): AlarmScheduler {
     },
     async cancelAlarm(alarmId) {
       await cancelNative(alarmId);
-      registry.write(registry.read().filter((item) => item.alarmId !== alarmId));
+      if (!registry.write(registry.read().filter((item) => item.alarmId !== alarmId))) {
+        throw new Error("Reminder data could not be cleared from this device.");
+      }
     },
     async updateAlarm(alarm) {
       await cancelNative(alarm.alarmId);
