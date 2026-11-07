@@ -570,10 +570,15 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
     setSelectedId(null);
   };
 
-  const clearAllData = () => {
-    void getAlarmScheduler().cancelAll();
-    clearV2Storage();
-    clearSessionEntered();
+  const clearAllData = async (): Promise<{ ok: true } | { ok: false; error: string }> => {
+    try {
+      await getAlarmScheduler().cancelAll();
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : "ROUTA could not cancel reminders." };
+    }
+    const cleared = clearV2Storage();
+    if (!cleared.ok) return cleared;
+    const sessionCleared = clearSessionEntered();
     setProfile(DEFAULT_PROFILE);
     setRoutine(null);
     setProgress({});
@@ -584,6 +589,13 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
     setAgentLink(emptyAgentLink());
     setSelectedId(null);
     setEntered(false);
+    if (!sessionCleared) {
+      const error = "Your local data was cleared, but ROUTA could not clear this session state. Close and reopen the app.";
+      setStorageWarning(error);
+      return { ok: false, error };
+    }
+    setStorageWarning("");
+    return { ok: true };
   };
 
   const currentSnapshot = (): DaymarkSnapshot => ({
