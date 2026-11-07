@@ -59,7 +59,7 @@ export function DaymarkScreen({
   return (
     <main className="min-h-dvh bg-canvas text-ink">
       <div className="mx-auto flex max-w-6xl flex-col lg:flex-row">
-        <aside className="hidden min-h-screen w-64 flex-col border-r border-line bg-cream p-7 lg:flex">
+        <aside className="hidden min-h-screen w-56 flex-col border-r border-line bg-cream p-7 lg:flex">
           <div className="mb-16 flex items-center gap-3 text-lg font-extrabold tracking-[0.14em]">
             <DaymarkMark />
             ROUTA
@@ -110,10 +110,10 @@ export function DaymarkScreen({
       </div>
 
       <nav
-        className="fixed inset-x-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 rounded-full bg-forest p-2 shadow-lg lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-paper/95 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur lg:hidden"
         aria-label="Main"
       >
-        <div className="flex items-center justify-between gap-1">
+        <div className="flex items-center justify-around gap-1">
           {NAV.map((item) => {
             const active = view === item.id;
             return (
@@ -122,12 +122,12 @@ export function DaymarkScreen({
                 type="button"
                 onClick={() => onNavigate(item.id)}
                 aria-current={active ? "page" : undefined}
-                className={`flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full text-xs font-bold ${
-                  active ? "bg-lime px-4 text-forest" : "text-paper/75"
+                className={`flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-semibold ${
+                  active ? "bg-mist text-forest" : "text-quiet"
                 }`}
               >
                 <item.Icon size={18} />
-                <span className={active ? "" : "sr-only"}>{item.label}</span>
+                <span>{item.label}</span>
               </button>
             );
           })}
