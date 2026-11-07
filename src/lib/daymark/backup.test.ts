@@ -57,6 +57,37 @@ describe("ROUTA backup validation", () => {
     }));
     assert.equal(result.ok, false);
   });
+
+  it("accepts valid date keys and checkpoint times in a full backup", () => {
+    const result = parseBackup(JSON.stringify({
+      app: "routa",
+      version: SNAPSHOT_VERSION,
+      snapshot: {
+        ...snapshot,
+        routine: {
+          id: "routine_1",
+          name: "My routine",
+          checkpoints: [{ id: "cp_1", title: "Study", time: "08:30" }],
+        },
+        progress: {
+          "2026-11-07": { completedCheckpointIds: ["cp_1"], completedTaskIds: {} },
+        },
+        notes: { "2026-11-07": "Keep going" },
+      },
+    }));
+    assert.equal(result.ok, true);
+  });
+
+  it("rejects impossible calendar dates and invalid checkpoint times", () => {
+    for (const invalid of [
+      { ...snapshot, progress: { "2026-02-30": { completedCheckpointIds: [], completedTaskIds: {} } } },
+      { ...snapshot, notes: { "2026-13-01": "bad date" } },
+      { ...snapshot, routine: { checkpoints: [{ title: "Study", time: "25:90" }] } },
+    ]) {
+      const result = parseBackup(JSON.stringify({ app: "routa", version: SNAPSHOT_VERSION, snapshot: invalid }));
+      assert.equal(result.ok, false);
+    }
+  });
 });
 
 
@@ -100,6 +131,27 @@ describe("complete ROUTA backup data", () => {
       version: 5,
       snapshot,
       checkIns: [],
+    }));
+    assert.equal(result.ok, false);
+  });
+
+  it("rejects malformed nested check-in and badge records instead of dropping them", () => {
+    const malformed = [
+      { checkIns: [{ date: "2026-11-07", startedAt: 42 }], badges: [] },
+      { checkIns: [], badges: [{ id: "unknown-badge", earnedOn: "2026-11-07", earnedAt: "2026-11-07T07:00:00.000Z" }] },
+    ];
+    for (const checkIns of malformed) {
+      const result = parseBackup(JSON.stringify({ app: "routa", version: 5, snapshot, checkIns }));
+      assert.equal(result.ok, false);
+    }
+  });
+
+  it("rejects malformed nested recovery records instead of silently omitting them", () => {
+    const result = parseBackup(JSON.stringify({
+      app: "routa",
+      version: 5,
+      snapshot,
+      recovery: { moves: [{ date: "2026-11-07", checkpointId: "cp_1" }], dismissed: [] },
     }));
     assert.equal(result.ok, false);
   });
