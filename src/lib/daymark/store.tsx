@@ -43,6 +43,7 @@ import {
   clearSessionEntered,
   clearV2Storage,
   dayProgress,
+  findCorruptSnapshotKeys,
   loadSnapshot,
   migrateLegacyV2IfNeeded,
   readSessionEntered,
@@ -192,9 +193,11 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
       return current.includes(key) ? current : [...current, key];
     });
   };
-  const storageWarning = storageFailures.length > 0
-    ? "Some changes could not be saved on this device. Check available storage and export a backup before closing ROUTA."
-    : null;
+  const storageWarning = storageFailures.includes("corruption")
+    ? "ROUTA found saved data it cannot safely read. Automatic saving is paused so the damaged data is not overwritten. Restore a valid backup or reset local data to continue saving."
+    : storageFailures.length > 0
+      ? "Some changes could not be saved on this device. Check available storage and export a backup before closing ROUTA."
+      : null;
 
   const today = dateKey(now);
   const timeZone = deviceTimeZone();
@@ -234,6 +237,11 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
         setStorageFailures((current) => current.includes("migration") ? current : [...current, "migration"]);
       }
       migrateLegacyV2IfNeeded();
+      const corruptKeys = findCorruptSnapshotKeys();
+      if (corruptKeys.length > 0) {
+        setMigrationBlocked(true);
+        setStorageFailures((current) => current.includes("corruption") ? current : [...current, "corruption"]);
+      }
       const snapshot = loadSnapshot();
       setProfile(snapshot.profile);
       setRoutine(hydrateRoutine(snapshot.routine));
@@ -626,7 +634,7 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
     const applied = applySnapshot(parsed.snapshot, { checkIns: parsed.checkIns, recovery: parsed.recovery });
     if (!applied.ok) return applied;
     setMigrationBlocked(false);
-    setStorageFailures((current) => current.filter((item) => item !== "migration"));
+    setStorageFailures((current) => current.filter((item) => item !== "migration" && item !== "corruption"));
     setProfile(parsed.snapshot.profile);
     setRoutine(hydrateRoutine(parsed.snapshot.routine));
     setProgress(parsed.snapshot.progress);
