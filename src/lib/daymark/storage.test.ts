@@ -202,6 +202,17 @@ describe("corrupt local snapshot detection", () => {
     assert.deepEqual(result, ["profile", "routine"]);
   });
 
+  it("also detects damaged check-in and recovery records", async () => {
+    const { CHECKIN_KEY } = await import("./checkins");
+    const { RECOVERY_KEY } = await import("./recovery");
+    const storage = memoryStorage({
+      [CHECKIN_KEY]: JSON.stringify({ checkIns: "not-an-array", badges: [] }),
+      [RECOVERY_KEY]: "{broken",
+    });
+    const result = withStorage(storage, () => findCorruptSnapshotKeys());
+    assert.deepEqual(result, ["check-ins", "recovery"]);
+  });
+
   it("accepts a valid empty routine and ignores absent records", () => {
     const storage = memoryStorage({
       [STORAGE_KEYS.routine]: JSON.stringify(null),
