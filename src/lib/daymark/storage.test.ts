@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { applySnapshot, clearSessionEntered, clearV2Storage, LEGACY_STORAGE_KEYS, loadSnapshot, SESSION_KEY, STORAGE_KEYS } from "./storage";
+import { applySnapshot, clearSessionEntered, clearV2Storage, findCorruptSnapshotKeys, LEGACY_STORAGE_KEYS, loadSnapshot, SESSION_KEY, STORAGE_KEYS } from "./storage";
 import type { DaymarkSnapshot } from "./types";
 
 const snapshot: DaymarkSnapshot = {
@@ -179,5 +179,35 @@ describe("legacy key migration fallback", () => {
     assert.equal(loaded.profile.name, "Legacy ROUTA");
     assert.equal(loaded.settings.weekStartsOn, 0);
     assert.equal(loaded.settings.remindersEnabled, true);
+  });
+});
+
+
+describe("corrupt local snapshot detection", () => {
+  it("identifies malformed JSON without modifying the original record", () => {
+    const damaged = "{not valid json";
+    const storage = memoryStorage({ [STORAGE_KEYS.progress]: damaged });
+    const result = withStorage(storage, () => findCorruptSnapshotKeys());
+    assert.deepEqual(result, ["progress"]);
+    assert.equal(storage.getItem(STORAGE_KEYS.progress), damaged);
+  });
+
+  it("identifies structurally invalid snapshot records", () => {
+    const storage = memoryStorage({
+      [STORAGE_KEYS.profile]: JSON.stringify([]),
+      [STORAGE_KEYS.routine]: JSON.stringify({ name: "Broken routine" }),
+      [STORAGE_KEYS.settings]: JSON.stringify({ weekStartsOn: 1, remindersEnabled: true }),
+    });
+    const result = withStorage(storage, () => findCorruptSnapshotKeys());
+    assert.deepEqual(result, ["profile", "routine"]);
+  });
+
+  it("accepts a valid empty routine and ignores absent records", () => {
+    const storage = memoryStorage({
+      [STORAGE_KEYS.routine]: JSON.stringify(null),
+      [STORAGE_KEYS.profile]: JSON.stringify({ name: "", focusAreas: [], onboarded: false }),
+    });
+    const result = withStorage(storage, () => findCorruptSnapshotKeys());
+    assert.deepEqual(result, []);
   });
 });
