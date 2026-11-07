@@ -270,37 +270,37 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
   }, [profile, ready]);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || migrationBlocked) return;
     recordStorageResult("routine", saveRoutine(routine));
   }, [routine, ready]);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || migrationBlocked) return;
     recordStorageResult("progress", saveProgress(progress));
   }, [progress, ready]);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || migrationBlocked) return;
     recordStorageResult("notes", saveNotes(notes));
   }, [notes, ready]);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || migrationBlocked) return;
     recordStorageResult("settings", saveSettings(settings));
   }, [settings, ready]);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || migrationBlocked) return;
     recordStorageResult("recovery", saveRecovery(recovery));
   }, [recovery, ready]);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || migrationBlocked) return;
     recordStorageResult("checkins", saveCheckIns(journal));
   }, [journal, ready]);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || migrationBlocked) return;
     recordStorageResult("agent", saveAgentLink(agentLink));
   }, [agentLink, ready]);
 
