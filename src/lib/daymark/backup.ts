@@ -30,7 +30,7 @@ export function buildBackup(
 }
 
 export function snapshotToJson(snapshot: DaymarkSnapshot, extras: BackupExtras = {}) {
-  return `${JSON.stringify(buildBackup(snapshot, new Date().toISOString(), extras), null, 2)}\\n`;
+  return `${JSON.stringify(buildBackup(snapshot, new Date().toISOString(), extras), null, 2)}\n`;
 }
 
 export function parseBackup(raw: string): {
