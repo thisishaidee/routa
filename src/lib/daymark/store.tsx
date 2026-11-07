@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 import { snapshotToJson, parseBackup } from "./backup";
 import { computeHealth, computeInsights, computeSuggestions } from "./insights";
 import { createId } from "./ids";
-import { migrateV1IfNeeded } from "./migration";
+import { hasV1Data, migrateV1IfNeeded } from "./migration";
 import {
   getAlarmScheduler,
   registerReminderWorker,
@@ -39,6 +39,7 @@ import {
 } from "./recovery";
 import {
   applySnapshot,
+  hasAnyV2Data,
   clearSessionEntered,
   clearV2Storage,
   dayProgress,
@@ -226,7 +227,10 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      migrateV1IfNeeded();
+      const shouldMigrateV1 = hasV1Data() && !hasAnyV2Data();
+      if (shouldMigrateV1 && !migrateV1IfNeeded()) {
+        setStorageFailures((current) => current.includes("migration") ? current : [...current, "migration"]);
+      }
       migrateLegacyV2IfNeeded();
       const snapshot = loadSnapshot();
       setProfile(snapshot.profile);
