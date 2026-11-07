@@ -81,6 +81,7 @@ import {
 
 interface DaymarkContextValue {
   ready: boolean;
+  storageWarning: string | null;
   entered: boolean;
   enterApp: () => void;
   now: Date;
@@ -164,6 +165,7 @@ function hydrateRoutine(routine: Routine | null): Routine | null {
 
 export function DaymarkProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
+  const [storageFailures, setStorageFailures] = useState<string[]>([]);
   const [entered, setEntered] = useState(false);
   const [now, setNow] = useState(() => new Date());
   const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE);
@@ -181,6 +183,16 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
   const remindersRef = useRef(false);
   routineRef.current = routine;
   remindersRef.current = settings.remindersEnabled;
+
+  const recordStorageResult = (key: string, saved: boolean) => {
+    setStorageFailures((current) => {
+      if (saved) return current.filter((item) => item !== key);
+      return current.includes(key) ? current : [...current, key];
+    });
+  };
+  const storageWarning = storageFailures.length > 0
+    ? "Some changes could not be saved on this device. Check available storage and export a backup before closing ROUTA."
+    : null;
 
   const today = dateKey(now);
   const timeZone = deviceTimeZone();
@@ -248,42 +260,42 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!ready) return;
-    saveProfile(profile);
+    recordStorageResult("profile", saveProfile(profile));
   }, [profile, ready]);
 
   useEffect(() => {
     if (!ready) return;
-    saveRoutine(routine);
+    recordStorageResult("routine", saveRoutine(routine));
   }, [routine, ready]);
 
   useEffect(() => {
     if (!ready) return;
-    saveProgress(progress);
+    recordStorageResult("progress", saveProgress(progress));
   }, [progress, ready]);
 
   useEffect(() => {
     if (!ready) return;
-    saveNotes(notes);
+    recordStorageResult("notes", saveNotes(notes));
   }, [notes, ready]);
 
   useEffect(() => {
     if (!ready) return;
-    saveSettings(settings);
+    recordStorageResult("settings", saveSettings(settings));
   }, [settings, ready]);
 
   useEffect(() => {
     if (!ready) return;
-    saveRecovery(recovery);
+    recordStorageResult("recovery", saveRecovery(recovery));
   }, [recovery, ready]);
 
   useEffect(() => {
     if (!ready) return;
-    saveCheckIns(journal);
+    recordStorageResult("checkins", saveCheckIns(journal));
   }, [journal, ready]);
 
   useEffect(() => {
     if (!ready) return;
-    saveAgentLink(agentLink);
+    recordStorageResult("agent", saveAgentLink(agentLink));
   }, [agentLink, ready]);
 
   useEffect(() => {
@@ -638,6 +650,7 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
 
   const value: DaymarkContextValue = {
     ready,
+    storageWarning,
     entered,
     enterApp,
     now,
