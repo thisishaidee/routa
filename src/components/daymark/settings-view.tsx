@@ -339,8 +339,10 @@ export function SettingsView() {
               onAsk={() => setConfirm("all")}
               onCancel={() => setConfirm(null)}
               onConfirm={() => {
-                clearAllData();
-                setConfirm(null);
+                void clearAllData().then((result) => {
+                  setConfirm(null);
+                  setBackupMessage(result.ok ? "Local data cleared." : result.error);
+                });
               }}
             />
           </div>
