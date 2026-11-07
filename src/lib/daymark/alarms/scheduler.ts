@@ -232,8 +232,16 @@ export function createAlarmScheduler(deps: AlarmSchedulerDeps): AlarmScheduler {
     },
     async cancelAll() {
       const current = registry.read();
-      for (const record of current) await cancelNative(record.alarmId);
-      if (!registry.clear()) throw new Error("Reminder data could not be cleared from this device.");
+      if (native) {
+        for (const record of current) {
+          try {
+            await native.cancel(record.alarmId);
+          } catch {
+            throw new Error("ROUTA could not cancel every device reminder. Your local data was kept.");
+          }
+        }
+      }
+      if (!registry.clear()) throw new Error("Reminder data could not be cleared from this device. Your local data was kept.");
     },
     async sync(checkpoints, settings, routineId = "routine_default") {
       const desired = desiredAlarms({
