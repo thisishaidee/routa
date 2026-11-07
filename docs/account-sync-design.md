@@ -36,8 +36,8 @@ Migration: `supabase/migrations/20261108000100_routa_workspaces.sql`
 
 - One row per `auth.users.id`, enforced by the primary key.
 - RLS is enabled and forced.
-- Authenticated users can select, insert, and update only their own row.
-- Anonymous users have no table privileges; there is no public read policy.
+- Authenticated users can select only their own row directly. Anonymous users have no table privileges.
+- Table writes are revoked from client roles; all inserts/updates go through the revision-checked RPC. The RPC runs with a fixed empty search path and row security enabled, and still checks the caller's authenticated user ID.
 - No client-side service-role key is permitted.
 - `save_routa_workspace` performs compare-and-swap using the expected revision. A stale device gets a conflict instead of silently overwriting a newer workspace.
 - The RPC is security-invoker and still subject to RLS. It cannot act without an authenticated user.
