@@ -103,12 +103,11 @@ export function createAlarmScheduler(deps: AlarmSchedulerDeps): AlarmScheduler {
   }
 
   async function cancelNative(alarmId: string) {
-    if (native) {
-      try {
-        await native.cancel(alarmId);
-      } catch {
-        /* still drop the local record */
-      }
+    if (!native) return;
+    try {
+      await native.cancel(alarmId);
+    } catch {
+      throw new Error("ROUTA could not cancel a device reminder. Its record was kept for retry.");
     }
   }
 
