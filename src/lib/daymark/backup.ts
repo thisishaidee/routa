@@ -9,6 +9,52 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 const SNAPSHOT_FIELDS = ["profile", "routine", "progress", "notes", "settings"] as const;
 
+const DATE_KEY = /^\\d{4}-\\d{2}-\\d{2}$/;
+const TIME_VALUE = /^(?:[01]\\d|2[0-3]):[0-5]\\d$/;
+
+function validStringArray(value: unknown): boolean {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function validSnapshotSection(field: (typeof SNAPSHOT_FIELDS)[number], value: unknown): boolean {
+  if (field === "routine") {
+    if (value === null) return true;
+    if (!isRecord(value) || !Array.isArray(value.checkpoints)) return false;
+    return value.checkpoints.every((checkpoint) => {
+      if (!isRecord(checkpoint) || typeof checkpoint.title !== "string" || !checkpoint.title.trim()
+        || typeof checkpoint.time !== "string" || !TIME_VALUE.test(checkpoint.time)) return false;
+      if (checkpoint.tasks !== undefined && (!Array.isArray(checkpoint.tasks) || !checkpoint.tasks.every((task) =>
+        (typeof task === "string" && task.trim().length > 0)
+        || (isRecord(task) && typeof task.title === "string" && task.title.trim().length > 0
+          && (task.id === undefined || typeof task.id === "string"))))) return false;
+      if (checkpoint.repeatDays !== undefined && (!Array.isArray(checkpoint.repeatDays)
+        || !checkpoint.repeatDays.every((day) => Number.isInteger(day) && Number(day) >= 0 && Number(day) <= 6))) return false;
+      for (const key of ["enabled", "reminderEnabled"] as const) {
+        if (checkpoint[key] !== undefined && typeof checkpoint[key] !== "boolean") return false;
+      }
+      return true;
+    });
+  }
+
+  if (!isRecord(value)) return false;
+  if (field === "profile") {
+    return (value.name === undefined || typeof value.name === "string")
+      && (value.onboarded === undefined || typeof value.onboarded === "boolean")
+      && (value.focusAreas === undefined || validStringArray(value.focusAreas));
+  }
+  if (field === "progress") {
+    return Object.entries(value).every(([date, entry]) => DATE_KEY.test(date) && isRecord(entry)
+      && (entry.completedCheckpointIds === undefined || validStringArray(entry.completedCheckpointIds))
+      && (entry.completedTaskIds === undefined || (isRecord(entry.completedTaskIds)
+        && Object.values(entry.completedTaskIds).every(validStringArray))));
+  }
+  if (field === "notes") {
+    return Object.entries(value).every(([date, note]) => DATE_KEY.test(date) && typeof note === "string");
+  }
+  return (value.weekStartsOn === undefined || value.weekStartsOn === 0 || value.weekStartsOn === 1)
+    && (value.remindersEnabled === undefined || typeof value.remindersEnabled === "boolean");
+}
+
 export interface BackupExtras {
   checkIns?: CheckInState;
   recovery?: RecoveryState;
@@ -75,23 +121,14 @@ export function parseBackup(raw: string): {
     return { ok: false, error: "This file does not contain ROUTA backup data." };
   }
 
-  // Reject malformed supplied sections instead of silently coercing them to empty defaults.
-  for (const field of ["profile", "progress", "notes", "settings"] as const) {
-    if (Object.prototype.hasOwnProperty.call(nested, field) && !isRecord(nested[field])) {
+  // Validate supplied sections before coercion so malformed nested records cannot disappear silently.
+  for (const field of SNAPSHOT_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(nested, field) && !validSnapshotSection(field, nested[field])) {
       return { ok: false, error: `The ${field} data in that backup could not be read.` };
     }
   }
 
   const snapshot = coerceSnapshot(nested);
-  if (Object.prototype.hasOwnProperty.call(nested, "routine")) {
-    if (nested.routine !== null && !snapshot.routine) {
-      return { ok: false, error: "The routine in that backup could not be read." };
-    }
-    if (isRecord(nested.routine) && Array.isArray(nested.routine.checkpoints)
-      && snapshot.routine?.checkpoints.length !== nested.routine.checkpoints.length) {
-      return { ok: false, error: "Some checkpoints in that backup could not be read." };
-    }
-  }
 
   if (parsed.checkIns !== undefined && !isRecord(parsed.checkIns)) {
     return { ok: false, error: "The check-in history in that backup could not be read." };
