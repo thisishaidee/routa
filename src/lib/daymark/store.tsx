@@ -13,7 +13,6 @@ import type { PlatformCapabilities } from "./alarms";
 import { computeStats, isDone, isTaskDone, toggleId } from "./progress";
 import {
   checkInStreak,
-  coerceCheckIns,
   EMPTY_CHECKINS,
   loadCheckIns,
   markCheckIn,
@@ -26,7 +25,6 @@ import {
 } from "./checkins";
 import type { DraftCheckpoint } from "./planner";
 import {
-  coerceRecovery,
   dropDayMove,
   EMPTY_RECOVERY,
   loadRecovery,
@@ -589,14 +587,15 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
   const importBackup = (raw: string) => {
     const parsed = parseBackup(raw);
     if (!parsed.ok) return parsed;
-    applySnapshot(parsed.snapshot);
+    const applied = applySnapshot(parsed.snapshot, { checkIns: parsed.checkIns, recovery: parsed.recovery });
+    if (!applied.ok) return applied;
     setProfile(parsed.snapshot.profile);
     setRoutine(hydrateRoutine(parsed.snapshot.routine));
     setProgress(parsed.snapshot.progress);
     setNotes(parsed.snapshot.notes);
     setSettings(parsed.snapshot.settings);
-    if (parsed.checkIns) setJournal(coerceCheckIns(parsed.checkIns));
-    if (parsed.recovery) setRecovery(coerceRecovery(parsed.recovery));
+    if (parsed.checkIns) setJournal(parsed.checkIns);
+    if (parsed.recovery) setRecovery(parsed.recovery);
     setSelectedId(null);
     return { ok: true };
   };
