@@ -103,4 +103,36 @@ describe("complete ROUTA backup data", () => {
     }));
     assert.equal(result.ok, false);
   });
+
+  it("rejects malformed progress instead of silently importing an empty history", () => {
+    const result = parseBackup(JSON.stringify({
+      app: "routa", version: SNAPSHOT_VERSION,
+      snapshot: { ...snapshot, progress: [] },
+    }));
+    assert.equal(result.ok, false);
+  });
+
+  it("rejects malformed notes and settings sections", () => {
+    for (const [field, value] of [["notes", null], ["settings", "dark"]] as const) {
+      const result = parseBackup(JSON.stringify({
+        app: "routa", version: SNAPSHOT_VERSION,
+        snapshot: { ...snapshot, [field]: value },
+      }));
+      assert.equal(result.ok, false);
+    }
+  });
+
+  it("rejects a routine when one or more checkpoints cannot be parsed", () => {
+    const result = parseBackup(JSON.stringify({
+      app: "routa", version: SNAPSHOT_VERSION,
+      snapshot: {
+        ...snapshot,
+        routine: {
+          id: "routine_1", name: "My routine", checkpoints: [{ title: "", time: "bad-time" }],
+        },
+      },
+    }));
+    assert.equal(result.ok, false);
+  });
+
 });
