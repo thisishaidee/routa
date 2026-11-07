@@ -101,9 +101,9 @@ export function clearSessionEntered(): boolean {
 
 const FOCUS_IDS = new Set<string>(FOCUS_AREAS.map((item) => item.id));
 
-function readJson(key: string): unknown {
+function readJson(key: string, legacyKey?: string): unknown {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = localStorage.getItem(key) ?? (legacyKey ? localStorage.getItem(legacyKey) : null);
     if (!raw) return null;
     return JSON.parse(raw) as unknown;
   } catch {
@@ -259,11 +259,11 @@ function coerceNotes(value: unknown): NotesMap {
 
 export function loadSnapshot(): DaymarkSnapshot {
   return coerceSnapshot({
-    profile: readJson(STORAGE_KEYS.profile),
-    routine: readJson(STORAGE_KEYS.routine),
-    progress: readJson(STORAGE_KEYS.progress),
-    notes: readJson(STORAGE_KEYS.notes),
-    settings: readJson(STORAGE_KEYS.settings),
+    profile: readJson(STORAGE_KEYS.profile, LEGACY_STORAGE_KEYS.profile),
+    routine: readJson(STORAGE_KEYS.routine, LEGACY_STORAGE_KEYS.routine),
+    progress: readJson(STORAGE_KEYS.progress, LEGACY_STORAGE_KEYS.progress),
+    notes: readJson(STORAGE_KEYS.notes, LEGACY_STORAGE_KEYS.notes),
+    settings: readJson(STORAGE_KEYS.settings, LEGACY_STORAGE_KEYS.settings),
   });
 }
 
