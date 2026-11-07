@@ -43,13 +43,13 @@ function validSnapshotSection(field: (typeof SNAPSHOT_FIELDS)[number], value: un
       && (value.focusAreas === undefined || validStringArray(value.focusAreas));
   }
   if (field === "progress") {
-    return Object.entries(value).every(([date, entry]) => DATE_KEY.test(date) && isRecord(entry)
+    return Object.entries(value).every(([date, entry]) => validDateKey(date) && isRecord(entry)
       && (entry.completedCheckpointIds === undefined || validStringArray(entry.completedCheckpointIds))
       && (entry.completedTaskIds === undefined || (isRecord(entry.completedTaskIds)
         && Object.values(entry.completedTaskIds).every(validStringArray))));
   }
   if (field === "notes") {
-    return Object.entries(value).every(([date, note]) => DATE_KEY.test(date) && typeof note === "string");
+    return Object.entries(value).every(([date, note]) => validDateKey(date) && typeof note === "string");
   }
   return (value.weekStartsOn === undefined || value.weekStartsOn === 0 || value.weekStartsOn === 1)
     && (value.remindersEnabled === undefined || typeof value.remindersEnabled === "boolean");
