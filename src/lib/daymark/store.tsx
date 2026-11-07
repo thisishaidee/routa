@@ -594,10 +594,10 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
     setEntered(false);
     if (!sessionCleared) {
       const error = "Your local data was cleared, but ROUTA could not clear this session state. Close and reopen the app.";
-      setStorageWarning(error);
+      setStorageFailures(["session"]);
       return { ok: false, error };
     }
-    setStorageWarning("");
+    setStorageFailures([]);
     return { ok: true };
   };
 
