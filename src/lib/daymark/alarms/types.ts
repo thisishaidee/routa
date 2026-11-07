@@ -119,8 +119,8 @@ export interface NativeAlarmAdapter {
 
 export interface AlarmRegistry {
   read(): AlarmRecord[];
-  write(records: AlarmRecord[]): void;
-  clear(): void;
+  write(records: AlarmRecord[]): boolean;
+  clear(): boolean;
 }
 
 export interface SyncResult {
