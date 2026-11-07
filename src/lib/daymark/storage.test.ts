@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { applySnapshot, clearSessionEntered, clearV2Storage, SESSION_KEY, STORAGE_KEYS } from "./storage";
+import { applySnapshot, clearSessionEntered, clearV2Storage, LEGACY_STORAGE_KEYS, loadSnapshot, SESSION_KEY, STORAGE_KEYS } from "./storage";
 import type { DaymarkSnapshot } from "./types";
 
 const snapshot: DaymarkSnapshot = {
@@ -165,5 +165,19 @@ describe("session reset safety", () => {
       if (descriptor) Object.defineProperty(globalThis, "sessionStorage", descriptor);
       else Reflect.deleteProperty(globalThis, "sessionStorage");
     }
+  });
+});
+
+
+describe("legacy key migration fallback", () => {
+  it("loads existing legacy data if copying it to the current key fails", () => {
+    const storage = memoryStorage({
+      [LEGACY_STORAGE_KEYS.profile]: JSON.stringify({ name: "Legacy ROUTA", focusAreas: ["study"], onboarded: true }),
+      [LEGACY_STORAGE_KEYS.settings]: JSON.stringify({ weekStartsOn: 0, remindersEnabled: true }),
+    }, STORAGE_KEYS.profile);
+    const loaded = withStorage(storage, () => loadSnapshot());
+    assert.equal(loaded.profile.name, "Legacy ROUTA");
+    assert.equal(loaded.settings.weekStartsOn, 0);
+    assert.equal(loaded.settings.remindersEnabled, true);
   });
 });
