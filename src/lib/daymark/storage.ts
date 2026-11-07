@@ -92,7 +92,8 @@ export function clearSessionEntered(): boolean {
   try {
     if (typeof sessionStorage === "undefined") return false;
     sessionStorage.removeItem(SESSION_KEY);
-    return sessionStorage.getItem(SESSION_KEY) === null;
+    sessionStorage.removeItem(LEGACY_SESSION_KEY);
+    return sessionStorage.getItem(SESSION_KEY) === null && sessionStorage.getItem(LEGACY_SESSION_KEY) === null;
   } catch {
     return false;
   }
