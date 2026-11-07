@@ -167,6 +167,7 @@ function hydrateRoutine(routine: Routine | null): Routine | null {
 export function DaymarkProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [storageFailures, setStorageFailures] = useState<string[]>([]);
+  const [migrationBlocked, setMigrationBlocked] = useState(false);
   const [entered, setEntered] = useState(false);
   const [now, setNow] = useState(() => new Date());
   const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE);
@@ -229,6 +230,7 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
     try {
       const shouldMigrateV1 = hasV1Data() && !hasAnyV2Data();
       if (shouldMigrateV1 && !migrateV1IfNeeded()) {
+        setMigrationBlocked(true);
         setStorageFailures((current) => current.includes("migration") ? current : [...current, "migration"]);
       }
       migrateLegacyV2IfNeeded();
@@ -263,7 +265,7 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || migrationBlocked) return;
     recordStorageResult("profile", saveProfile(profile));
   }, [profile, ready]);
 
@@ -303,7 +305,7 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
   }, [agentLink, ready]);
 
   useEffect(() => {
-    if (!ready || !agentLink.enabled) {
+    if (!ready || migrationBlocked || !agentLink.enabled) {
       if (ready && !agentLink.enabled) setAgentStatus("idle");
       return;
     }
@@ -344,7 +346,7 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
   }, [ready, routine, progress, today, checkInKey]);
 
   useEffect(() => {
-    if (!ready || !routine) return;
+    if (!ready || migrationBlocked || !routine) return;
     // tickReminders handles per-checkpoint fallback when a native schedule fails.
     const fire = () => tickReminders({ checkpoints: todayCheckpoints, settings, permission });
     fire();
@@ -360,7 +362,7 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
   }, [ready, routine, todayCheckpoints, settings, permission]);
 
   useEffect(() => {
-    if (!ready || !routine) return;
+    if (!ready || migrationBlocked || !routine) return;
     void getAlarmScheduler()
       .sync(routine.checkpoints, settings, routine.id)
       .then((result) => recordStorageResult("alarms", !result.skipped.some((item) => item.reason === "failed")))
@@ -623,6 +625,8 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
     if (!parsed.ok) return parsed;
     const applied = applySnapshot(parsed.snapshot, { checkIns: parsed.checkIns, recovery: parsed.recovery });
     if (!applied.ok) return applied;
+    setMigrationBlocked(false);
+    setStorageFailures((current) => current.filter((item) => item !== "migration"));
     setProfile(parsed.snapshot.profile);
     setRoutine(hydrateRoutine(parsed.snapshot.routine));
     setProgress(parsed.snapshot.progress);
