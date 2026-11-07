@@ -35,15 +35,17 @@ export interface ReminderTick {
   onFire?: (checkpoint: Checkpoint) => void;
 }
 
+export function shouldUseFallbackNotification(exactAlarmsAvailable: boolean, schedulingState?: string) {
+  return !exactAlarmsAvailable || schedulingState === "fallback";
+}
+
 export function tickReminders(input: ReminderTick, date = new Date()) {
   const scheduler = getAlarmScheduler();
   const exactAlarmsAvailable = scheduler.canExactAlarm();
-  const fallbackIds = new Set(
-    scheduler.getScheduledAlarms()
-      .filter((record) => record.schedulingState === "fallback")
-      .map((record) => record.checkpointId),
+  const statesByCheckpoint = new Map(
+    scheduler.getScheduledAlarms().map((record) => [record.checkpointId, record.schedulingState]),
   );
-  if (exactAlarmsAvailable && fallbackIds.size === 0) return;
+  if (exactAlarmsAvailable && ![...statesByCheckpoint.values()].includes("fallback")) return;
   if (typeof Notification === "undefined") return;
   const permission = input.permission ?? reminderPermission();
   const due = dueNow({
@@ -55,7 +57,7 @@ export function tickReminders(input: ReminderTick, date = new Date()) {
   for (const item of due) {
     // If native exact alarms are available, only notify for checkpoints whose
     // individual native schedule failed. Healthy OS alarms must not duplicate.
-    if (exactAlarmsAvailable && !fallbackIds.has(item.checkpoint.id)) continue;
+    if (!shouldUseFallbackNotification(exactAlarmsAvailable, statesByCheckpoint.get(item.checkpoint.id))) continue;
     if (alreadyFired(date, item.checkpoint.id)) continue;
     markFired(date, item.checkpoint.id);
     try {
