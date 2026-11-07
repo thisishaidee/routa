@@ -137,6 +137,21 @@ export function findCorruptSnapshotKeys(): string[] {
       keys.push(name);
     }
   }
+  for (const [name, key, requiredArrays] of [
+    ["check-ins", CHECKIN_KEY, ["checkIns", "badges"]],
+    ["recovery", RECOVERY_KEY, ["moves", "dismissed"]],
+  ] as const) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw === null) continue;
+      const value: unknown = JSON.parse(raw);
+      if (!isRecord(value) || requiredArrays.some((field) => !Array.isArray(value[field]))) {
+        keys.push(name);
+      }
+    } catch {
+      keys.push(name);
+    }
+  }
   return keys;
 }
 
