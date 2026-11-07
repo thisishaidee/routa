@@ -9,23 +9,36 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 const SNAPSHOT_FIELDS = ["profile", "routine", "progress", "notes", "settings"] as const;
 
+export interface BackupExtras {
+  checkIns?: CheckInState;
+  recovery?: RecoveryState;
+}
+
 export function buildBackup(
   snapshot: DaymarkSnapshot,
   exportedAt = new Date().toISOString(),
+  extras: BackupExtras = {},
 ): RoutaBackup {
   return {
     app: "routa",
     version: SNAPSHOT_VERSION,
     exportedAt,
     snapshot,
+    ...(extras.checkIns ? { checkIns: extras.checkIns } : {}),
+    ...(extras.recovery ? { recovery: extras.recovery } : {}),
   };
 }
 
-export function snapshotToJson(snapshot: DaymarkSnapshot) {
-  return `${JSON.stringify(buildBackup(snapshot), null, 2)}\n`;
+export function snapshotToJson(snapshot: DaymarkSnapshot, extras: BackupExtras = {}) {
+  return `${JSON.stringify(buildBackup(snapshot, new Date().toISOString(), extras), null, 2)}\\n`;
 }
 
-export function parseBackup(raw: string): { ok: true; snapshot: DaymarkSnapshot; checkIns?: CheckInState; recovery?: RecoveryState } | { ok: false; error: string } {
+export function parseBackup(raw: string): {
+  ok: true;
+  snapshot: DaymarkSnapshot;
+  checkIns?: CheckInState;
+  recovery?: RecoveryState;
+} | { ok: false; error: string } {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw) as unknown;
