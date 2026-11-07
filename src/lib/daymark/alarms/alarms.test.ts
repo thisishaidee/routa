@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { Checkpoint, ReminderPermission, Settings } from "../types";
 import { reminderUxCopy } from "./copy";
+import { shouldUseFallbackNotification } from "../notifications";
 import { alarmIdFor, desiredAlarms, dueNow, isReminderEligible } from "./policy";
 import { createMemoryRegistry } from "./registry";
 import { createAlarmScheduler } from "./scheduler";
@@ -443,6 +444,12 @@ describe("reboot, timezone, reinstall, devices", () => {
 });
 
 describe("fallback", () => {
+  it("uses page notifications only for failed native schedules when exact alarms exist", () => {
+    assert.equal(shouldUseFallbackNotification(true, "scheduled"), false);
+    assert.equal(shouldUseFallbackNotification(true, "fallback"), true);
+    assert.equal(shouldUseFallbackNotification(true, "listening"), false);
+    assert.equal(shouldUseFallbackNotification(false, "listening"), true);
+  });
   it("native failure falls back to notifications, never scheduled", async () => {
     const native = mockNative({ failSchedule: true });
     const scheduler = createAlarmScheduler({
