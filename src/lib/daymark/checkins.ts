@@ -215,11 +215,12 @@ export function loadCheckIns(): CheckInState {
   }
 }
 
-export function saveCheckIns(state: CheckInState) {
+export function saveCheckIns(state: CheckInState): boolean {
   try {
-    if (typeof localStorage === "undefined") return;
+    if (typeof localStorage === "undefined") return false;
     localStorage.setItem(CHECKIN_KEY, JSON.stringify(state));
+    return true;
   } catch {
-    /* ignore */
+    return false;
   }
 }
