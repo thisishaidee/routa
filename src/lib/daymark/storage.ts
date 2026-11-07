@@ -111,6 +111,35 @@ function readJson(key: string, legacyKey?: string): unknown {
   }
 }
 
+export function findCorruptSnapshotKeys(): string[] {
+  const keys: string[] = [];
+  for (const name of Object.keys(STORAGE_KEYS) as Array<keyof typeof STORAGE_KEYS>) {
+    const currentKey = STORAGE_KEYS[name];
+    const legacyKey = LEGACY_STORAGE_KEYS[name];
+    try {
+      const current = localStorage.getItem(currentKey);
+      const raw = current !== null ? current : localStorage.getItem(legacyKey);
+      if (raw === null) continue;
+      let value: unknown;
+      try {
+        value = JSON.parse(raw) as unknown;
+      } catch {
+        keys.push(name);
+        continue;
+      }
+      const valid =
+        name === "routine"
+          ? value === null || (isRecord(value) && Array.isArray(value.checkpoints))
+          : isRecord(value);
+      if (!valid) keys.push(name);
+    } catch {
+      // If storage cannot be inspected, block writes rather than risk overwriting data.
+      keys.push(name);
+    }
+  }
+  return keys;
+}
+
 function writeJson(key: string, value: unknown): boolean {
   try {
     if (typeof localStorage === "undefined") return false;
