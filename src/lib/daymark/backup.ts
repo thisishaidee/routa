@@ -5,6 +5,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+const SNAPSHOT_FIELDS = ["profile", "routine", "progress", "notes", "settings"] as const;
+
 export function buildBackup(
   snapshot: DaymarkSnapshot,
   exportedAt = new Date().toISOString(),
@@ -36,14 +38,30 @@ export function parseBackup(raw: string): { ok: true; snapshot: DaymarkSnapshot 
     return { ok: false, error: "That file is not a Routa backup." };
   }
 
-  const version = typeof parsed.version === "number" ? parsed.version : 2;
-  if (version > SNAPSHOT_VERSION) {
-    return { ok: false, error: "That backup is from a newer Routa. Update the app, then import again." };
+  if (parsed.version !== undefined) {
+    if (typeof parsed.version !== "number" || !Number.isInteger(parsed.version) || parsed.version < 1) {
+      return { ok: false, error: "That backup has an invalid version." };
+    }
+    if (parsed.version > SNAPSHOT_VERSION) {
+      return { ok: false, error: "That backup is from a newer Routa. Update the app, then import again." };
+    }
   }
 
-  const nested = isRecord(parsed.snapshot) ? parsed.snapshot : parsed;
+  const hasWrappedSnapshot = Object.prototype.hasOwnProperty.call(parsed, "snapshot");
+  if (hasWrappedSnapshot && !isRecord(parsed.snapshot)) {
+    return { ok: false, error: "The snapshot in that backup could not be read." };
+  }
+
+  const nested = hasWrappedSnapshot ? parsed.snapshot as Record<string, unknown> : parsed;
+  const hasSnapshotData = SNAPSHOT_FIELDS.some((field) =>
+    Object.prototype.hasOwnProperty.call(nested, field),
+  );
+  if (!hasSnapshotData) {
+    return { ok: false, error: "This file does not contain ROUTA backup data." };
+  }
+
   const snapshot = coerceSnapshot(nested);
-  if (nested.routine && !snapshot.routine) {
+  if (Object.prototype.hasOwnProperty.call(nested, "routine") && nested.routine !== null && !snapshot.routine) {
     return { ok: false, error: "The routine in that backup could not be read." };
   }
 
