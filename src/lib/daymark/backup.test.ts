@@ -122,6 +122,36 @@ describe("complete ROUTA backup data", () => {
     }
   });
 
+  it("rejects malformed nested progress entries instead of dropping completed work", () => {
+    const result = parseBackup(JSON.stringify({
+      app: "routa", version: SNAPSHOT_VERSION,
+      snapshot: { ...snapshot, progress: { "2026-11-07": { completedCheckpointIds: "done" } } },
+    }));
+    assert.equal(result.ok, false);
+  });
+
+  it("rejects non-string note values instead of silently omitting notes", () => {
+    const result = parseBackup(JSON.stringify({
+      app: "routa", version: SNAPSHOT_VERSION,
+      snapshot: { ...snapshot, notes: { "2026-11-07": 42 } },
+    }));
+    assert.equal(result.ok, false);
+  });
+
+  it("rejects malformed task entries inside otherwise valid checkpoints", () => {
+    const result = parseBackup(JSON.stringify({
+      app: "routa", version: SNAPSHOT_VERSION,
+      snapshot: {
+        ...snapshot,
+        routine: {
+          id: "routine_1", name: "My routine",
+          checkpoints: [{ id: "cp_1", title: "Study", time: "08:00", tasks: [{ title: "" }] }],
+        },
+      },
+    }));
+    assert.equal(result.ok, false);
+  });
+
   it("rejects a routine when one or more checkpoints cannot be parsed", () => {
     const result = parseBackup(JSON.stringify({
       app: "routa", version: SNAPSHOT_VERSION,
