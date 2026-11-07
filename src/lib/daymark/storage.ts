@@ -56,14 +56,14 @@ export function migrateLegacyV2IfNeeded() {
 
 export function hasAnyV2Data() {
   try {
-    return Boolean(
-      localStorage.getItem(STORAGE_KEYS.routine) ||
-        localStorage.getItem(STORAGE_KEYS.profile) ||
-        localStorage.getItem(LEGACY_STORAGE_KEYS.routine) ||
-        localStorage.getItem(LEGACY_STORAGE_KEYS.profile),
-    );
+    const keys = [
+      ...Object.values(STORAGE_KEYS),
+      ...Object.values(LEGACY_STORAGE_KEYS),
+    ];
+    return keys.some((key) => localStorage.getItem(key) !== null);
   } catch {
-    return false;
+    // If storage cannot be inspected, do not risk migrating over existing data.
+    return true;
   }
 }
 
