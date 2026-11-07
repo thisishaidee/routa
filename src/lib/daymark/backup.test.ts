@@ -58,3 +58,49 @@ describe("ROUTA backup validation", () => {
     assert.equal(result.ok, false);
   });
 });
+
+
+describe("complete ROUTA backup data", () => {
+  it("preserves check-ins, badges, and recovery records", () => {
+    const checkIns = {
+      checkIns: [{ date: "2026-11-07", startedAt: "2026-11-07T07:00:00.000Z" }],
+      badges: [{ id: "first-check-in" as const, earnedOn: "2026-11-07", earnedAt: "2026-11-07T07:00:00.000Z" }],
+    };
+    const recovery = {
+      moves: [{
+        routineId: "routine_default",
+        date: "2026-11-07",
+        checkpointId: "cp_1",
+        fromTime: "08:00",
+        time: "09:00",
+        createdAt: "2026-11-07T08:00:00.000Z",
+      }],
+      dismissed: [{ date: "2026-11-07", checkpointId: "cp_2" }],
+    };
+    const result = parseBackup(snapshotToJson(snapshot, { checkIns, recovery }));
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      assert.deepEqual(result.checkIns, checkIns);
+      assert.deepEqual(result.recovery, recovery);
+    }
+  });
+
+  it("keeps older backups valid without inventing missing history", () => {
+    const result = parseBackup(JSON.stringify({ app: "routa", version: 4, snapshot }));
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      assert.equal(result.checkIns, undefined);
+      assert.equal(result.recovery, undefined);
+    }
+  });
+
+  it("rejects malformed optional history containers", () => {
+    const result = parseBackup(JSON.stringify({
+      app: "routa",
+      version: 5,
+      snapshot,
+      checkIns: [],
+    }));
+    assert.equal(result.ok, false);
+  });
+});
