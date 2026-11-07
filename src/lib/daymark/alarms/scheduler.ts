@@ -179,8 +179,10 @@ export function createAlarmScheduler(deps: AlarmSchedulerDeps): AlarmScheduler {
       }
     }
 
+    const failedRecords: AlarmRecord[] = [];
     for (const alarm of alarms) {
-      await place(alarm, force);
+      const placed = await place(alarm, force);
+      if (placed.schedulingState === "failed") failedRecords.push(placed);
     }
 
     const next = registry.read();
@@ -195,6 +197,11 @@ export function createAlarmScheduler(deps: AlarmSchedulerDeps): AlarmScheduler {
         listeningIds.push(record.checkpointId);
       } else {
         skipped.push({ id: record.checkpointId, reason: stateToStatus(record.schedulingState, exact) });
+      }
+    }
+    for (const record of failedRecords) {
+      if (!skipped.some((item) => item.id === record.checkpointId)) {
+        skipped.push({ id: record.checkpointId, reason: stateToStatus("failed", exact) });
       }
     }
 
