@@ -51,3 +51,21 @@ describe("legacy V1 migration", () => {
     assert.ok(storage.getItem(STORAGE_KEYS.routine));
   });
 });
+
+
+describe("legacy migration protection", () => {
+  it("does not overwrite partial current data when legacy V1 keys also exist", () => {
+    const existingProgress = JSON.stringify({ "2026-11-07": { completedCheckpointIds: ["keep-me"], completedTaskIds: {} } });
+    const storage = memoryStorage({
+      "daymark-done": JSON.stringify({ "2026-11-07-0": true }),
+      "routa:v2:progress": existingProgress,
+    });
+    const result = withStorage(storage, () => {
+      const migrated = migrateV1IfNeeded();
+      return { migrated, progress: storage.getItem("routa:v2:progress"), routine: storage.getItem("routa:v2:routine") };
+    });
+    assert.equal(result.migrated, false);
+    assert.equal(result.progress, existingProgress);
+    assert.equal(result.routine, null);
+  });
+});
