@@ -80,9 +80,11 @@ export function createMemoryRegistry(initial: AlarmRecord[] = []): AlarmRegistry
     },
     write(next) {
       records = next.map((item) => ({ ...item, recurrence: [...item.recurrence] }));
+      return true;
     },
     clear() {
       records = [];
+      return true;
     },
   };
 }
@@ -103,18 +105,21 @@ export function createLocalRegistry(): AlarmRegistry {
     },
     write(records) {
       try {
-        if (typeof localStorage === "undefined") return;
-        localStorage.setItem(ALARMS_KEY, JSON.stringify(records));
+        if (typeof localStorage === "undefined") return false;
+        const value = JSON.stringify(records);
+        localStorage.setItem(ALARMS_KEY, value);
+        return localStorage.getItem(ALARMS_KEY) === value;
       } catch {
-        /* ignore */
+        return false;
       }
     },
     clear() {
       try {
-        if (typeof localStorage === "undefined") return;
+        if (typeof localStorage === "undefined") return false;
         localStorage.removeItem(ALARMS_KEY);
+        return localStorage.getItem(ALARMS_KEY) === null;
       } catch {
-        /* ignore */
+        return false;
       }
     },
   };
