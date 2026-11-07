@@ -41,16 +41,20 @@ function storage(options: { failWrite?: boolean; failRemove?: boolean } = {}): S
 describe("local alarm registry", () => {
   it("verifies successful writes and clear operations", () => {
     const deviceStorage = storage();
-    const registry = withStorage(deviceStorage, () => createLocalRegistry());
-    assert.equal(registry.write([record]), true);
-    assert.equal(registry.read()[0]?.alarmId, record.alarmId);
-    assert.equal(registry.clear(), true);
-    assert.equal(deviceStorage.getItem(ALARMS_KEY), null);
+    withStorage(deviceStorage, () => {
+      const registry = createLocalRegistry();
+      assert.equal(registry.write([record]), true);
+      assert.equal(registry.read()[0]?.alarmId, record.alarmId);
+      assert.equal(registry.clear(), true);
+      assert.equal(deviceStorage.getItem(ALARMS_KEY), null);
+    });
   });
 
   it("reports write and clear failures instead of silently succeeding", () => {
-    const registry = withStorage(storage({ failWrite: true, failRemove: true }), () => createLocalRegistry());
-    assert.equal(registry.write([record]), false);
-    assert.equal(registry.clear(), false);
+    withStorage(storage({ failWrite: true, failRemove: true }), () => {
+      const registry = createLocalRegistry();
+      assert.equal(registry.write([record]), false);
+      assert.equal(registry.clear(), false);
+    });
   });
 });
