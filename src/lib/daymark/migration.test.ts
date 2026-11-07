@@ -54,6 +54,21 @@ describe("legacy V1 migration", () => {
 
 
 describe("legacy migration protection", () => {
+
+
+  it("does not mark migration complete when legacy progress JSON is malformed", () => {
+    const storage = memoryStorage({
+      "daymark-done": "{not valid json",
+      "daymark-tasks": JSON.stringify({}),
+    });
+    const result = withStorage(storage, () => {
+      const migrated = migrateV1IfNeeded();
+      return { migrated, routine: storage.getItem("routa:v2:routine") };
+    });
+    assert.equal(result.migrated, false);
+    assert.equal(result.routine, null);
+  });
+
   it("does not overwrite partial current data when legacy V1 keys also exist", () => {
     const existingProgress = JSON.stringify({ "2026-11-07": { completedCheckpointIds: ["keep-me"], completedTaskIds: {} } });
     const storage = memoryStorage({
