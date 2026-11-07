@@ -88,11 +88,13 @@ export function writeSessionEntered() {
   }
 }
 
-export function clearSessionEntered() {
+export function clearSessionEntered(): boolean {
   try {
+    if (typeof sessionStorage === "undefined") return false;
     sessionStorage.removeItem(SESSION_KEY);
+    return sessionStorage.getItem(SESSION_KEY) === null;
   } catch {
-    /* ignore */
+    return false;
   }
 }
 
@@ -344,7 +346,7 @@ export function saveNotes(notes: NotesMap): boolean { return writeJson(STORAGE_K
 
 export function saveSettings(settings: Settings): boolean { return writeJson(STORAGE_KEYS.settings, settings); }
 
-export function clearV2Storage() {
+export function clearV2Storage(): { ok: true } | { ok: false; error: string } {
   const extra = [
     ...Object.values(LEGACY_STORAGE_KEYS),
     "daymark-done",
@@ -355,22 +357,40 @@ export function clearV2Storage() {
     "routa:v2:checkins",
     "routa:v2:agent",
   ];
-  for (const key of [...Object.values(STORAGE_KEYS), ...extra]) {
-    try {
-      localStorage.removeItem(key);
-    } catch {
-      /* ignore */
-    }
-  }
   try {
-    const pending: string[] = [];
+    if (typeof localStorage === "undefined") return { ok: false, error: "ROUTA cannot access this device's storage. No data was cleared." };
+    const keys = new Set<string>([...Object.values(STORAGE_KEYS), ...extra]);
     for (let i = 0; i < localStorage.length; i += 1) {
       const key = localStorage.key(i);
-      if (key && key.startsWith("daymark-note-")) pending.push(key);
+      if (key && key.startsWith("daymark-note-")) keys.add(key);
     }
-    pending.forEach((key) => localStorage.removeItem(key));
+    const previous = new Map<string, string | null>();
+    for (const key of keys) previous.set(key, localStorage.getItem(key));
+    const removed: string[] = [];
+    try {
+      for (const key of keys) {
+        if (previous.get(key) === null) continue;
+        localStorage.removeItem(key);
+        removed.push(key);
+        if (localStorage.getItem(key) !== null) throw new Error("Storage removal verification failed.");
+      }
+      return { ok: true };
+    } catch {
+      let rollbackFailed = false;
+      for (const key of removed.reverse()) {
+        try {
+          const value = previous.get(key);
+          if (value !== null && value !== undefined) localStorage.setItem(key, value);
+        } catch {
+          rollbackFailed = true;
+        }
+      }
+      return { ok: false, error: rollbackFailed
+        ? "ROUTA could not fully restore the data after the reset failed. Keep the app open and export a backup if possible."
+        : "ROUTA could not clear all local data. Your previous data has been restored." };
+    }
   } catch {
-    /* ignore */
+    return { ok: false, error: "ROUTA could not inspect this device's storage. No data was cleared." };
   }
 }
 
