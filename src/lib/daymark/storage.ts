@@ -16,6 +16,8 @@ import {
   type WeekDay,
 } from "./types";
 import { isValidTime, normalizeTime } from "./time";
+import { CHECKIN_KEY, type CheckInState } from "./checkins";
+import { RECOVERY_KEY, type RecoveryState } from "./recovery";
 
 export const STORAGE_KEYS = {
   profile: "routa:v2:profile",
@@ -106,11 +108,13 @@ function readJson(key: string): unknown {
   }
 }
 
-function writeJson(key: string, value: unknown) {
+function writeJson(key: string, value: unknown): boolean {
   try {
+    if (typeof localStorage === "undefined") return false;
     localStorage.setItem(key, JSON.stringify(value));
+    return true;
   } catch {
-    // Storage may be unavailable or full — fail closed.
+    return false;
   }
 }
 
@@ -271,41 +275,74 @@ export function coerceSnapshot(value: unknown): DaymarkSnapshot {
   };
 }
 
-export function applySnapshot(snapshot: DaymarkSnapshot) {
-  saveProfile(snapshot.profile);
-  saveRoutine(snapshot.routine);
-  saveProgress(snapshot.progress);
-  saveNotes(snapshot.notes);
-  saveSettings(snapshot.settings);
+export function applySnapshot(
+  snapshot: DaymarkSnapshot,
+  extras: { checkIns?: CheckInState; recovery?: RecoveryState } = {},
+): { ok: true } | { ok: false; error: string } {
+  if (typeof localStorage === "undefined") {
+    return { ok: false, error: "ROUTA cannot access this device's storage. Your current data was not changed." };
+  }
+
+  const entries: Array<[string, string]> = [
+    [STORAGE_KEYS.profile, JSON.stringify(snapshot.profile)],
+    [STORAGE_KEYS.routine, JSON.stringify(snapshot.routine)],
+    [STORAGE_KEYS.progress, JSON.stringify(snapshot.progress)],
+    [STORAGE_KEYS.notes, JSON.stringify(snapshot.notes)],
+    [STORAGE_KEYS.settings, JSON.stringify(snapshot.settings)],
+  ];
+  if (extras.checkIns) entries.push([CHECKIN_KEY, JSON.stringify(extras.checkIns)]);
+  if (extras.recovery) entries.push([RECOVERY_KEY, JSON.stringify(extras.recovery)]);
+
+  const previous = new Map<string, string | null>();
+  const written: string[] = [];
+  try {
+    for (const [key] of entries) previous.set(key, localStorage.getItem(key));
+    for (const [key, value] of entries) {
+      localStorage.setItem(key, value);
+      written.push(key);
+      if (localStorage.getItem(key) !== value) throw new Error("Storage verification failed.");
+    }
+    return { ok: true };
+  } catch {
+    let rollbackFailed = false;
+    for (const key of written.reverse()) {
+      try {
+        const oldValue = previous.get(key);
+        if (oldValue === null || oldValue === undefined) localStorage.removeItem(key);
+        else localStorage.setItem(key, oldValue);
+      } catch {
+        rollbackFailed = true;
+      }
+    }
+    return {
+      ok: false,
+      error: rollbackFailed
+        ? "ROUTA could not fully restore the previous storage values. Keep this app open and export a backup before making more changes."
+        : "ROUTA could not save that backup. Your previous data has been kept.",
+    };
+  }
 }
 
-export function saveProfile(profile: Profile) {
-  writeJson(STORAGE_KEYS.profile, profile);
-}
+export function saveProfile(profile: Profile): boolean { return writeJson(STORAGE_KEYS.profile, profile); }
 
-export function saveRoutine(routine: Routine | null) {
+export function saveRoutine(routine: Routine | null): boolean {
   if (!routine) {
     try {
+      if (typeof localStorage === "undefined") return false;
       localStorage.removeItem(STORAGE_KEYS.routine);
+      return true;
     } catch {
-      /* ignore */
+      return false;
     }
-    return;
   }
-  writeJson(STORAGE_KEYS.routine, routine);
+  return writeJson(STORAGE_KEYS.routine, routine);
 }
 
-export function saveProgress(progress: ProgressMap) {
-  writeJson(STORAGE_KEYS.progress, progress);
-}
+export function saveProgress(progress: ProgressMap): boolean { return writeJson(STORAGE_KEYS.progress, progress); }
 
-export function saveNotes(notes: NotesMap) {
-  writeJson(STORAGE_KEYS.notes, notes);
-}
+export function saveNotes(notes: NotesMap): boolean { return writeJson(STORAGE_KEYS.notes, notes); }
 
-export function saveSettings(settings: Settings) {
-  writeJson(STORAGE_KEYS.settings, settings);
-}
+export function saveSettings(settings: Settings): boolean { return writeJson(STORAGE_KEYS.settings, settings); }
 
 export function clearV2Storage() {
   const extra = [
