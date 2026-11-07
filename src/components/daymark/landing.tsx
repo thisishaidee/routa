@@ -75,6 +75,7 @@ export function Landing({
 
         <section className="grid gap-8 pt-4 lg:grid-cols-[1fr_26rem] lg:items-center lg:gap-x-20 lg:pt-12">
           <div className="flex flex-col">
+            <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.2em] text-olive">A little more intention, every day</p>
             <h1 className="daymark-rise-delay text-[2.6rem] font-black leading-[1.02] tracking-[-0.045em] text-balance lg:text-7xl">
               Your day, with a direction.
             </h1>
@@ -117,7 +118,7 @@ export function Landing({
           </h2>
           <ul className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-5">
             {FEATURES.map((feature) => (
-              <li key={feature.title} className="rounded-3xl border border-line bg-paper p-4 lg:p-6">
+              <li key={feature.title} className="rounded-2xl border-0 bg-cream p-4 lg:p-6">
                 <span aria-hidden="true" className={`mb-3 block size-9 rounded-xl ${feature.swatch}`} />
                 <h3 className="text-sm font-extrabold lg:text-base">{feature.title}</h3>
                 <p className="mt-1 text-xs leading-5 text-quiet lg:text-sm lg:leading-6">{feature.line}</p>
@@ -128,7 +129,7 @@ export function Landing({
 
         <section
           id="agents"
-          className="mt-16 scroll-mt-6 rounded-3xl bg-ink p-6 text-paper lg:mt-24 lg:flex lg:items-center lg:justify-between lg:gap-10 lg:p-10"
+          className="mt-16 scroll-mt-6 rounded-2xl bg-ink p-6 text-paper lg:mt-24 lg:flex lg:items-center lg:justify-between lg:gap-10 lg:p-10"
           aria-labelledby="agents-title"
         >
           <div className="max-w-xl">
@@ -150,7 +151,7 @@ export function Landing({
           </a>
         </section>
 
-        <section className="mt-6 rounded-3xl border border-line bg-paper p-5" aria-labelledby="note-title">
+        <section className="mt-6 rounded-2xl border-0 bg-cream p-5" aria-labelledby="note-title">
           <h2 id="note-title" className="text-sm font-extrabold">
             Good to know
           </h2>
@@ -195,7 +196,7 @@ function EnterButton({
     <button
       type="button"
       onClick={onEnter}
-      className={`inline-flex h-14 items-center justify-center rounded-full bg-forest px-8 text-sm font-bold text-paper transition-transform duration-150 ease-out active:scale-[0.96] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest ${className ?? ""}`}
+      className={`inline-flex h-14 items-center justify-center rounded-xl bg-forest px-8 text-sm font-bold text-paper transition-transform duration-150 ease-out active:scale-[0.96] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest ${className ?? ""}`}
     >
       {returning ? "Continue →" : "Build my routine →"}
     </button>
@@ -222,7 +223,7 @@ function Marker({ status }: { status: Status }) {
 function SampleDay({ className }: { className?: string }) {
   return (
     <section
-      className={`rounded-3xl bg-[radial-gradient(120%_120%_at_100%_0%,var(--color-forest-mid)_0,var(--color-forest)_60%)] p-5 text-paper lg:p-6 ${className ?? ""}`}
+      className={`rounded-2xl bg-[radial-gradient(120%_120%_at_100%_0%,var(--color-forest-mid)_0,var(--color-forest)_60%)] p-5 text-paper lg:p-6 ${className ?? ""}`}
       aria-label="Sample day with six checkpoints"
     >
       <p className="text-[11px] font-black tracking-[0.12em] text-mist">TODAY</p>
