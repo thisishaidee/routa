@@ -90,8 +90,12 @@ export function createMemoryRegistry(initial: AlarmRecord[] = []): AlarmRegistry
 }
 
 export function createLocalRegistry(): AlarmRegistry {
+  let volatileRecords: AlarmRecord[] | null = null;
+  const copy = (records: AlarmRecord[]) => records.map((item) => ({ ...item, recurrence: [...item.recurrence] }));
+
   return {
     read() {
+      if (volatileRecords) return copy(volatileRecords);
       try {
         if (typeof localStorage === "undefined") return [];
         const raw = localStorage.getItem(ALARMS_KEY);
@@ -104,12 +108,22 @@ export function createLocalRegistry(): AlarmRegistry {
       }
     },
     write(records) {
+      const next = copy(records);
       try {
-        if (typeof localStorage === "undefined") return false;
-        const value = JSON.stringify(records);
+        if (typeof localStorage === "undefined") {
+          volatileRecords = next;
+          return false;
+        }
+        const value = JSON.stringify(next);
         localStorage.setItem(ALARMS_KEY, value);
-        return localStorage.getItem(ALARMS_KEY) === value;
+        if (localStorage.getItem(ALARMS_KEY) !== value) {
+          volatileRecords = next;
+          return false;
+        }
+        volatileRecords = null;
+        return true;
       } catch {
+        volatileRecords = next;
         return false;
       }
     },
@@ -117,7 +131,9 @@ export function createLocalRegistry(): AlarmRegistry {
       try {
         if (typeof localStorage === "undefined") return false;
         localStorage.removeItem(ALARMS_KEY);
-        return localStorage.getItem(ALARMS_KEY) === null;
+        if (localStorage.getItem(ALARMS_KEY) !== null) return false;
+        volatileRecords = [];
+        return true;
       } catch {
         return false;
       }
