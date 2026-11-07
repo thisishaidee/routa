@@ -13,6 +13,7 @@ import type { PlatformCapabilities } from "./alarms";
 import { computeStats, isDone, isTaskDone, toggleId } from "./progress";
 import {
   checkInStreak,
+  coerceCheckIns,
   EMPTY_CHECKINS,
   loadCheckIns,
   markCheckIn,
@@ -25,6 +26,7 @@ import {
 } from "./checkins";
 import type { DraftCheckpoint } from "./planner";
 import {
+  coerceRecovery,
   dropDayMove,
   EMPTY_RECOVERY,
   loadRecovery,
@@ -582,7 +584,7 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
     settings,
   });
 
-  const exportBackup = () => snapshotToJson(currentSnapshot());
+  const exportBackup = () => snapshotToJson(currentSnapshot(), { checkIns: journal, recovery });
 
   const importBackup = (raw: string) => {
     const parsed = parseBackup(raw);
@@ -593,6 +595,8 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
     setProgress(parsed.snapshot.progress);
     setNotes(parsed.snapshot.notes);
     setSettings(parsed.snapshot.settings);
+    if (parsed.checkIns) setJournal(coerceCheckIns(parsed.checkIns));
+    if (parsed.recovery) setRecovery(coerceRecovery(parsed.recovery));
     setSelectedId(null);
     return { ok: true };
   };
