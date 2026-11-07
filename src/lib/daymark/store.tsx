@@ -580,7 +580,10 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
       return { ok: false, error: error instanceof Error ? error.message : "ROUTA could not cancel reminders." };
     }
     const cleared = clearV2Storage();
-    if (!cleared.ok) return cleared;
+    if (!cleared.ok) {
+      if (routine) void getAlarmScheduler().sync(routine.checkpoints, settings, routine.id);
+      return cleared;
+    }
     const sessionCleared = clearSessionEntered();
     setProfile(DEFAULT_PROFILE);
     setRoutine(null);
