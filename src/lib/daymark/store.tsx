@@ -119,7 +119,7 @@ interface DaymarkContextValue {
   requestReminders: () => Promise<ReminderPermission>;
   resetProgress: () => void;
   resetRoutine: () => void;
-  clearAllData: () => void;
+  clearAllData: () => Promise<{ ok: true } | { ok: false; error: string }>;
   exportBackup: () => string;
   importBackup: (raw: string) => { ok: boolean; error?: string };
   recoveryProposals: ReturnType<typeof suggestRecovery>;
