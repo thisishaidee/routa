@@ -64,9 +64,9 @@ export function RoutineView({
       ) : (
         <div className="mt-6 space-y-2">
           {checkpoints.map((item, index) => (
-            <div key={item.id} className={`rounded-2xl border bg-paper p-4 ${item.enabled ? "border-line" : "border-line opacity-60"}`}>
+            <div key={item.id} className={`rounded-none border-0 border-b border-line bg-transparent px-1 py-5 ${item.enabled ? "" : "opacity-55"}`}>
               <div className="flex items-start gap-3">
-                <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-mist text-olive">
+                <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-cream text-olive">
                   <CheckpointIcon name={item.icon} className="size-4" />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -147,7 +147,7 @@ export function RoutineView({
           <button
             type="button"
             onClick={onAdd}
-            className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-line text-sm font-bold text-olive"
+            className="flex h-14 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line text-sm font-bold text-olive"
           >
             <Plus size={16} /> Add checkpoint
           </button>
