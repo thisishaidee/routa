@@ -54,6 +54,7 @@ describe("local alarm registry", () => {
     withStorage(storage({ failWrite: true, failRemove: true }), () => {
       const registry = createLocalRegistry();
       assert.equal(registry.write([record]), false);
+      assert.equal(registry.read()[0]?.alarmId, record.alarmId, "failed persistence keeps runtime scheduling state available");
       assert.equal(registry.clear(), false);
     });
   });
