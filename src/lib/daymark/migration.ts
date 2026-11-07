@@ -7,18 +7,19 @@ const V1_TASKS = "daymark-tasks";
 const V1_ALARMS = "daymark-alarms";
 const V1_NOTE_PREFIX = "daymark-note-";
 
-function parseRecord(raw: string | null): Record<string, boolean> {
+function parseRecord(raw: string | null): Record<string, boolean> | null {
   if (!raw) return {};
   try {
     const value = JSON.parse(raw) as unknown;
-    if (!value || typeof value !== "object") return {};
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
     const next: Record<string, boolean> = {};
     for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
-      if (item === true) next[key] = true;
+      if (typeof item !== "boolean") return null;
+      if (item) next[key] = true;
     }
     return next;
   } catch {
-    return {};
+    return null;
   }
 }
 
@@ -49,6 +50,7 @@ export function migrateV1IfNeeded() {
     const routine = buildTemplate("builder");
     const done = parseRecord(localStorage.getItem(V1_DONE));
     const tasks = parseRecord(localStorage.getItem(V1_TASKS));
+    if (!done || !tasks) return false;
     const progress: ProgressMap = {};
     const notes: NotesMap = {};
 
