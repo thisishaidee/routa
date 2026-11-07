@@ -14,7 +14,7 @@ alter table public.routa_workspaces enable row level security;
 alter table public.routa_workspaces force row level security;
 
 revoke all on table public.routa_workspaces from anon, authenticated;
-grant select, insert, update on table public.routa_workspaces to authenticated;
+grant select on table public.routa_workspaces to authenticated;
 
 drop policy if exists "Users can read their own ROUTA workspace" on public.routa_workspaces;
 create policy "Users can read their own ROUTA workspace"
@@ -43,8 +43,9 @@ create or replace function public.save_routa_workspace(
 )
 returns table (revision bigint, updated_at timestamptz)
 language plpgsql
-security invoker
+security definer
 set search_path = ''
+set row_security = on
 as $$
 declare
   v_user_id uuid := auth.uid();
