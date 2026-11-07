@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { applySnapshot, clearV2Storage, STORAGE_KEYS } from "./storage";
+import { applySnapshot, clearSessionEntered, clearV2Storage, SESSION_KEY, STORAGE_KEYS } from "./storage";
 import type { DaymarkSnapshot } from "./types";
 
 const snapshot: DaymarkSnapshot = {
@@ -139,6 +139,31 @@ describe("clear local data safety", () => {
     assert.equal(result.ok, false);
     for (const [key, value] of Object.entries(seed)) {
       assert.equal(storage.getItem(key), value, `preserves ${key}`);
+    }
+  });
+});
+
+
+describe("session reset safety", () => {
+  it("clears both current and legacy session markers", () => {
+    const values = new Map<string, string>([[SESSION_KEY, "1"], ["daymark:v2:entered", "1"]]);
+    const session = {
+      get length() { return values.size; },
+      clear() { values.clear(); },
+      getItem(key: string) { return values.get(key) ?? null; },
+      key(index: number) { return [...values.keys()][index] ?? null; },
+      removeItem(key: string) { values.delete(key); },
+      setItem(key: string, value: string) { values.set(key, String(value)); },
+    } as Storage;
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, "sessionStorage");
+    Object.defineProperty(globalThis, "sessionStorage", { configurable: true, value: session });
+    try {
+      assert.equal(clearSessionEntered(), true);
+      assert.equal(session.getItem(SESSION_KEY), null);
+      assert.equal(session.getItem("daymark:v2:entered"), null);
+    } finally {
+      if (descriptor) Object.defineProperty(globalThis, "sessionStorage", descriptor);
+      else Reflect.deleteProperty(globalThis, "sessionStorage");
     }
   });
 });
