@@ -96,7 +96,9 @@ export function createAlarmScheduler(deps: AlarmSchedulerDeps): AlarmScheduler {
   function upsert(record: AlarmRecord) {
     const current = registry.read().filter((item) => item.alarmId !== record.alarmId);
     if (record.schedulingState !== "cancelled") current.push(record);
-    registry.write(current);
+    if (!registry.write(current)) {
+      return { ...record, schedulingState: "failed", lastError: "Reminder status could not be saved on this device." };
+    }
     return record;
   }
 
@@ -225,7 +227,7 @@ export function createAlarmScheduler(deps: AlarmSchedulerDeps): AlarmScheduler {
     async cancelAll() {
       const current = registry.read();
       for (const record of current) await cancelNative(record.alarmId);
-      registry.clear();
+      if (!registry.clear()) throw new Error("Reminder data could not be cleared from this device.");
     },
     async sync(checkpoints, settings, routineId = "routine_default") {
       const desired = desiredAlarms({
