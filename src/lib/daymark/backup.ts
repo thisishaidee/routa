@@ -28,7 +28,7 @@ function validSnapshotSection(field: (typeof SNAPSHOT_FIELDS)[number], value: un
         || (isRecord(task) && typeof task.title === "string" && task.title.trim().length > 0
           && (task.id === undefined || typeof task.id === "string"))))) return false;
       if (checkpoint.repeatDays !== undefined && (!Array.isArray(checkpoint.repeatDays)
-        || !checkpoint.repeatDays.every((day) => Number.isInteger(day) && Number(day) >= 0 && Number(day) <= 6))) return false;
+        || !checkpoint.repeatDays.every((day) => typeof day === "number" && Number.isInteger(day) && day >= 0 && day <= 6))) return false;
       for (const key of ["enabled", "reminderEnabled"] as const) {
         if (checkpoint[key] !== undefined && typeof checkpoint[key] !== "boolean") return false;
       }
