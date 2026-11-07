@@ -1,5 +1,7 @@
 import { SNAPSHOT_VERSION, type DaymarkSnapshot, type RoutaBackup } from "./types";
 import { coerceSnapshot, loadSnapshot } from "./storage";
+import { coerceCheckIns, type CheckInState } from "./checkins";
+import { coerceRecovery, type RecoveryState } from "./recovery";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -23,7 +25,7 @@ export function snapshotToJson(snapshot: DaymarkSnapshot) {
   return `${JSON.stringify(buildBackup(snapshot), null, 2)}\n`;
 }
 
-export function parseBackup(raw: string): { ok: true; snapshot: DaymarkSnapshot } | { ok: false; error: string } {
+export function parseBackup(raw: string): { ok: true; snapshot: DaymarkSnapshot; checkIns?: CheckInState; recovery?: RecoveryState } | { ok: false; error: string } {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw) as unknown;
@@ -65,11 +67,23 @@ export function parseBackup(raw: string): { ok: true; snapshot: DaymarkSnapshot 
     return { ok: false, error: "The routine in that backup could not be read." };
   }
 
-  return { ok: true, snapshot };
+  if (parsed.checkIns !== undefined && !isRecord(parsed.checkIns)) {
+    return { ok: false, error: "The check-in history in that backup could not be read." };
+  }
+  if (parsed.recovery !== undefined && !isRecord(parsed.recovery)) {
+    return { ok: false, error: "The recovery history in that backup could not be read." };
+  }
+
+  return {
+    ok: true,
+    snapshot,
+    ...(parsed.checkIns !== undefined ? { checkIns: coerceCheckIns(parsed.checkIns) } : {}),
+    ...(parsed.recovery !== undefined ? { recovery: coerceRecovery(parsed.recovery) } : {}),
+  };
 }
 
-export function currentSnapshotJson() {
-  return snapshotToJson(loadSnapshot());
+export function currentSnapshotJson(extras: BackupExtras = {}) {
+  return snapshotToJson(loadSnapshot(), extras);
 }
 
 export function backupFilename(date = new Date()) {
