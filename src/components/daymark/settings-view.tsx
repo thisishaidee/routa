@@ -6,7 +6,6 @@ import { clockLabel, deviceTimeZone } from "@/lib/daymark/time";
 import { AccountCard } from "./account-card";
 import { AgentLinkCard } from "./agent-link";
 import { CalendarExportCard } from "./calendar-export";
-import { AccountCard } from "./account-card";
 
 export function SettingsView() {
   const {
