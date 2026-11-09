@@ -40,7 +40,65 @@ export function AccountCard() {
 
   const run = async (action: () => Promise<void>) => {
     setBusy(true); setError(""); setMessage("");
-    try { await action(); }...[truncated]    });
+    try { await action(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Something went wrong. Please try again."); }
+    finally { setBusy(false); }
+  };
+
+  const signUp = () => run(async () => {
+    if (!supabase) throw new Error("Account services are not configured.");
+    const { data, error: issue } = await supabase.auth.signUp({
+      email: email.trim(), password,
+      options: { emailRedirectTo: window.location.origin },
+    });
+    if (issue) throw issue;
+    if (data.session && !verified(data.user)) await supabase.auth.signOut();
+    setMessage("Check your email and open the verification link once. Then return here and sign in.");
+  });
+
+  const signIn = () => run(async () => {
+    if (!supabase) throw new Error("Account services are not configured.");
+    const { data, error: issue } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    if (issue) throw issue;
+    if (!verified(data.user)) {
+      await supabase.auth.signOut();
+      throw new Error("Verify your email using the link we sent before signing in.");
+    }
+    setMessage("Signed in. Your ROUTA data remains local until you choose to sync it.");
+  });
+
+  const resetPassword = () => run(async () => {
+    if (!supabase || !email.trim()) throw new Error("Enter your account email first.");
+    const { error: issue } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: window.location.origin });
+    if (issue) throw issue;
+    setMessage("If an account exists for that email, a password reset link has been sent.");
+  });
+
+  const updatePassword = () => run(async () => {
+    if (!supabase || newPassword.length < 8) throw new Error("Choose a password with at least 8 characters.");
+    const { error: issue } = await supabase.auth.updateUser({ password: newPassword });
+    if (issue) throw issue;
+    setRecovering(false); setNewPassword(""); setMessage("Password updated.");
+  });
+
+  const readCloud = async () => {
+    if (!supabase || !session?.user || !verified(session.user)) throw new Error("Sign in with a verified email first.");
+    const { data, error: issue } = await supabase.from("routa_workspaces")
+      .select("schema_version, revision, payload").eq("user_id", session.user.id).maybeSingle();
+    if (issue) throw issue;
+    return (data as Workspace | null) ?? null;
+  };
+
+  const localPayload = () => {
+    const backup = JSON.parse(exportBackup()) as { snapshot: unknown; checkIns?: unknown; recovery?: unknown };
+    return { snapshot: backup.snapshot, ...(backup.checkIns ? { checkIns: backup.checkIns } : {}), ...(backup.recovery ? { recovery: backup.recovery } : {}) };
+  };
+
+  const saveCloud = async (expected: number) => {
+    if (!supabase) throw new Error("Account services are not configured.");
+    const { data, error: issue } = await supabase.rpc("save_routa_workspace", {
+      p_expected_revision: expected, p_schema_version: 1, p_payload: localPayload(),
+    });
     if (issue) throw issue;
     const saved = Array.isArray(data) ? data[0] : data;
     if (!saved?.revision) throw new Error("Cloud save was not confirmed. Your local data is safe.");
@@ -87,4 +145,51 @@ export function AccountCard() {
     await saveCloud(Number(latest.revision));
   });
 
-  if (!supabaseConfigu...[truncated]
+  if (!supabaseConfigured) return (
+    <section className="rounded-2xl bg-cream p-5">
+      <p className="text-xs font-bold uppercase tracking-[0.16em] text-soft">Account & cloud backup</p>
+      <p className="mt-2 text-sm leading-6 text-quiet">Account services are not connected to this deployment yet. Your routines remain saved on this device.</p>
+    </section>
+  );
+  if (loading) return <section className="rounded-2xl bg-cream p-5 text-sm text-quiet">Checking account…</section>;
+
+  return (
+    <section className="rounded-2xl bg-cream p-5">
+      <p className="text-xs font-bold uppercase tracking-[0.16em] text-soft">Account & cloud backup</p>
+      {recovering ? (
+          <div className="mt-4 space-y-3">
+            <p className="text-sm text-quiet">Choose a new password.</p>
+            <input type="password" autoComplete="new-password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="New password (8+ characters)" className="h-12 w-full rounded-xl border border-line bg-canvas px-4 text-sm" />
+            <button type="button" disabled={busy} onClick={updatePassword} className="h-11 rounded-full bg-forest px-5 text-sm font-bold text-paper disabled:opacity-50">Update password</button>
+          </div>
+      ) : !session ? (
+          <>
+            <div className="mt-4 flex gap-2">
+              <button type="button" onClick={() => { setMode("signup"); setError(""); setMessage(""); }} className={"rounded-full px-4 py-2 text-xs font-bold " + (mode === "signup" ? "bg-forest text-paper" : "bg-canvas text-quiet")}>Create account</button>
+              <button type="button" onClick={() => { setMode("signin"); setError(""); setMessage(""); }} className={"rounded-full px-4 py-2 text-xs font-bold " + (mode === "signin" ? "bg-forest text-paper" : "bg-canvas text-quiet")}>Sign in</button>
+            </div>
+            <div className="mt-4 space-y-3">
+              <input type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email address" className="h-12 w-full rounded-xl border border-line bg-canvas px-4 text-sm" />
+              <input type="password" autoComplete={mode === "si...[truncated]          <p className="text-sm font-semibold text-ink">{session.user.email}</p>
+          <p className="mt-1 text-xs text-quiet">Verified account · Your data remains on this device unless you sync it.</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button type="button" disabled={busy} onClick={sync} className="h-11 rounded-full bg-forest px-5 text-sm font-bold text-paper disabled:opacity-50">{busy ? "Working…" : "Sync cloud backup"}</button>
+            <button type="button" disabled={busy} onClick={() => void run(async () => { const { error: issue } = await supabase!.auth.signOut(); if (issue) throw issue; setMessage("Signed out. Your local data remains on this device."); })} className="h-11 rounded-full bg-canvas px-5 text-sm font-bold disabled:opacity-50">Sign out</button>
+          </div>
+          {remote ? (
+            <div className="mt-4 rounded-xl bg-canvas p-4">
+              <p className="text-sm font-semibold">A cloud backup already exists or changed on another device.</p>
+              <p className="mt-1 text-xs leading-5 text-quiet">Use cloud data to replace this device's data, or keep this device's data to replace the cloud copy.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button type="button" disabled={busy} onClick={restoreCloud} className="h-10 rounded-full bg-forest px-4 text-xs font-bold text-paper">Use cloud data</button>
+                <button type="button" disabled={busy} onClick={replaceCloud} className="h-10 rounded-full bg-paper px-4 text-xs font-bold text-danger">Keep this device's data</button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      )}
+      {error ? <p role="alert" className="mt-3 text-sm font-semibold text-danger">{error}</p> : null}
+      {message ? <p role="status" className="mt-3 text-sm font-medium text-olive">{message}</p> : null}
+    </section>
+  );
+}
