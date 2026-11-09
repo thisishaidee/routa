@@ -244,8 +244,6 @@ export function SettingsView() {
           </div>
         </div>
 
-        <AccountCard />
-
         <CalendarExportCard />
 
         <AgentLinkCard />
@@ -269,7 +267,7 @@ export function SettingsView() {
         <div className="rounded-2xl border-0 bg-cream p-5">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-soft">Backup</p>
           <p className="mt-2 text-pretty text-sm leading-6 text-quiet">
-            Everything lives on this device. Export a JSON backup so you can restore it.
+            Your routines stay on this device unless you choose cloud sync. Export a JSON backup so you can restore them whenever you need.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <button type="button" onClick={downloadBackup} className="h-12 rounded-full bg-forest px-5 text-sm font-bold text-paper">
