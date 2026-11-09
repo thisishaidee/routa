@@ -5,6 +5,7 @@ import { useDaymark } from "@/lib/daymark/store";
 import { clockLabel, deviceTimeZone } from "@/lib/daymark/time";
 import { AgentLinkCard } from "./agent-link";
 import { CalendarExportCard } from "./calendar-export";
+import { AccountCard } from "./account-card";
 
 export function SettingsView() {
   const {
@@ -241,6 +242,8 @@ export function SettingsView() {
             })}
           </div>
         </div>
+
+        <AccountCard />
 
         <CalendarExportCard />
 
