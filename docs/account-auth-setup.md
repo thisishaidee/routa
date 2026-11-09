@@ -4,7 +4,7 @@ ROUTA uses Supabase Auth with email/password authentication. Guest use remains a
 
 ## Required deployment variables
 
-Set these in the Vercel Preview environment before testing the account UI:
+Set these in the Vercel Preview environment for the feature/routa-auth-foundation branch before testing the account UI. Do not add them to Production yet:
 
 - VITE_SUPABASE_URL: the ROUTA Supabase project URL.
 - VITE_SUPABASE_PUBLISHABLE_KEY: the project's publishable key.
