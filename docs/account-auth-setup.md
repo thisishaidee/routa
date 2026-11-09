@@ -14,8 +14,8 @@ Only the publishable key belongs in browser code. Never expose a Supabase secret
 ## Supabase Auth settings
 
 1. Keep email confirmations enabled so new accounts must verify their email once.
-2. Set the Site URL to the deployed preview URL while testing.
-3. Add the preview URL and production URL to the allowed redirect URLs.
+2. Keep the Site URL set to ROUTA's canonical production domain.
+3. Add the exact preview URL and production URL to the allowed redirect URLs. Do not change the Site URL just to test the preview.
 4. Configure an email provider / SMTP before public signup testing; the default email service may have delivery limits.
 
 Password reset uses the same site origin and Supabase's recovery flow.
