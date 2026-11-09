@@ -4,6 +4,7 @@ import { SNAPSHOT_VERSION } from "@/lib/daymark/types";
 import { getSupabaseClient, supabaseConfigured } from "@/lib/daymark/supabase";
 import { useDaymark } from "@/lib/daymark/store";
 
+// The cloud payload mirrors the validated local backup sections; device-only settings stay local.
 type Workspace = { schema_version: number; revision: number; payload: { snapshot?: unknown; checkIns?: unknown; recovery?: unknown } };
 const verified = (user: User | null) => Boolean(user?.email_confirmed_at || user?.confirmed_at);
 
