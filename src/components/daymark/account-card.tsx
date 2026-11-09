@@ -170,7 +170,15 @@ export function AccountCard() {
             </div>
             <div className="mt-4 space-y-3">
               <input type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email address" className="h-12 w-full rounded-xl border border-line bg-canvas px-4 text-sm" />
-              <input type="password" autoComplete={mode === "si...[truncated]          <p className="text-sm font-semibold text-ink">{session.user.email}</p>
+              <input type="password" autoComplete={mode === "signup" ? "new-password" : "current-password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="Password (8+ characters)" className="h-12 w-full rounded-xl border border-line bg-canvas px-4 text-sm" />
+              <button type="button" disabled={busy || !email.trim() || password.length < 8} onClick={mode === "signup" ? signUp : signIn} className="h-12 w-full rounded-full bg-forest px-5 text-sm font-bold text-paper disabled:opacity-50">{busy ? "Please wait…" : mode === "signup" ? "Create account" : "Sign in"}</button>
+              <button type="button" disabled={busy || !email.trim()} onClick={resetPassword} className="text-xs font-semibold text-quiet underline underline-offset-4">Forgot password?</button>
+            </div>
+            <p className="mt-3 text-xs leading-5 text-quiet">You can use ROUTA without an account. Email verification is required once when creating an account.</p>
+          </>
+      ) : (
+        <div className="mt-4">
+          <p className="text-sm font-semibold text-ink">{session.user.email}</p>
           <p className="mt-1 text-xs text-quiet">Verified account · Your data remains on this device unless you sync it.</p>
           <div className="mt-4 flex flex-wrap gap-2">
             <button type="button" disabled={busy} onClick={sync} className="h-11 rounded-full bg-forest px-5 text-sm font-bold text-paper disabled:opacity-50">{busy ? "Working…" : "Sync cloud backup"}</button>
