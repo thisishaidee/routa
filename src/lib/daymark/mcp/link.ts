@@ -47,12 +47,13 @@ export function loadAgentLink(): AgentLink {
   }
 }
 
-export function saveAgentLink(link: AgentLink) {
+export function saveAgentLink(link: AgentLink): boolean {
   try {
-    if (typeof localStorage === "undefined") return;
+    if (typeof localStorage === "undefined") return false;
     localStorage.setItem(AGENT_KEY, JSON.stringify(link));
+    return true;
   } catch {
-    /* ignore */
+    return false;
   }
 }
 

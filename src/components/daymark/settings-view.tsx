@@ -5,6 +5,7 @@ import { useDaymark } from "@/lib/daymark/store";
 import { clockLabel, deviceTimeZone } from "@/lib/daymark/time";
 import { AgentLinkCard } from "./agent-link";
 import { CalendarExportCard } from "./calendar-export";
+import { AccountCard } from "./account-card";
 
 export function SettingsView() {
   const {
@@ -101,7 +102,7 @@ export function SettingsView() {
       <h1 className="mt-2 text-3xl font-black tracking-[-0.04em]">Your ROUTA</h1>
 
       <div className="mt-6 space-y-4">
-        <div className="rounded-3xl border border-line bg-paper p-5">
+        <div className="rounded-2xl border-0 bg-cream p-5">
           <label className="block text-xs font-bold text-quiet">
             Name
             <input
@@ -123,7 +124,7 @@ export function SettingsView() {
           ) : null}
         </div>
 
-        <label className="block rounded-3xl border border-line bg-paper p-5 text-xs font-bold text-quiet">
+        <label className="block rounded-2xl border-0 bg-cream p-5 text-xs font-bold text-quiet">
           Routine name
           <input
             value={routine?.name ?? ""}
@@ -133,7 +134,7 @@ export function SettingsView() {
           />
         </label>
 
-        <label className="block rounded-3xl border border-line bg-paper p-5 text-xs font-bold text-quiet">
+        <label className="block rounded-2xl border-0 bg-cream p-5 text-xs font-bold text-quiet">
           Description
           <textarea
             value={routine?.description ?? ""}
@@ -143,7 +144,7 @@ export function SettingsView() {
           />
         </label>
 
-        <div className="rounded-3xl border border-line bg-paper p-5">
+        <div className="rounded-2xl border-0 bg-cream p-5">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-soft">Week starts</p>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <button
@@ -166,7 +167,7 @@ export function SettingsView() {
           <p className="mt-3 text-xs text-quiet">Times use this device: {deviceTimeZone()}.</p>
         </div>
 
-        <div className="rounded-3xl border border-line bg-paper p-5">
+        <div className="rounded-2xl border-0 bg-cream p-5">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-soft">Reminders</p>
           <h2 className="mt-2 text-xl font-black">{copy.headline}</h2>
           <p className="mt-2 text-pretty text-sm leading-6 text-quiet">{copy.body}</p>
@@ -217,7 +218,7 @@ export function SettingsView() {
             {(routine?.checkpoints ?? []).map((item) => {
               const status = alarmStatus(item);
               return (
-                <div key={item.id} className="flex items-center gap-3 rounded-2xl bg-canvas px-4 py-3">
+                <div key={item.id} className="flex items-center gap-3 rounded-xl bg-paper px-4 py-3">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-bold">{item.title}</p>
                     <p className="text-xs text-quiet">
@@ -242,11 +243,13 @@ export function SettingsView() {
           </div>
         </div>
 
+        <AccountCard />
+
         <CalendarExportCard />
 
         <AgentLinkCard />
 
-        <div className="rounded-3xl border border-line bg-paper p-5">
+        <div className="rounded-2xl border-0 bg-cream p-5">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-soft">Install</p>
           <h2 className="mt-2 text-xl font-black">Use ROUTA like an app</h2>
           <p className="mt-2 text-pretty text-sm leading-6 text-quiet">
@@ -262,7 +265,7 @@ export function SettingsView() {
           </p>
         </div>
 
-        <div className="rounded-3xl border border-line bg-paper p-5">
+        <div className="rounded-2xl border-0 bg-cream p-5">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-soft">Backup</p>
           <p className="mt-2 text-pretty text-sm leading-6 text-quiet">
             Everything lives on this device. Export a JSON backup so you can restore it.
@@ -309,7 +312,7 @@ export function SettingsView() {
           {backupMessage ? <p className="mt-3 text-sm font-medium text-olive">{backupMessage}</p> : null}
         </div>
 
-        <div className="rounded-3xl border border-line bg-paper p-5">
+        <div className="rounded-2xl border-0 bg-cream p-5">
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-soft">Data</p>
           <p className="mt-2 text-pretty text-sm leading-6 text-quiet">Reset only this device. Export first if you want a copy.</p>
           <div className="mt-4 space-y-2">
@@ -339,8 +342,10 @@ export function SettingsView() {
               onAsk={() => setConfirm("all")}
               onCancel={() => setConfirm(null)}
               onConfirm={() => {
-                clearAllData();
-                setConfirm(null);
+                void clearAllData().then((result) => {
+                  setConfirm(null);
+                  setBackupMessage(result.ok ? "Local data cleared." : result.error);
+                });
               }}
             />
           </div>

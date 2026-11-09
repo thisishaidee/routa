@@ -222,12 +222,13 @@ export function loadRecovery(): RecoveryState {
   }
 }
 
-export function saveRecovery(state: RecoveryState) {
+export function saveRecovery(state: RecoveryState): boolean {
   try {
-    if (typeof localStorage === "undefined") return;
+    if (typeof localStorage === "undefined") return false;
     localStorage.setItem(RECOVERY_KEY, JSON.stringify(state));
+    return true;
   } catch {
-    /* ignore */
+    return false;
   }
 }
 

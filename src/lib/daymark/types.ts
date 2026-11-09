@@ -87,9 +87,11 @@ export interface RoutaBackup {
   version: number;
   exportedAt: string;
   snapshot: DaymarkSnapshot;
+  checkIns?: import("./checkins").CheckInState;
+  recovery?: import("./recovery").RecoveryState;
 }
 
-export const SNAPSHOT_VERSION = 4;
+export const SNAPSHOT_VERSION = 5;
 
 export const ALL_DAYS: WeekDay[] = [0, 1, 2, 3, 4, 5, 6];
 

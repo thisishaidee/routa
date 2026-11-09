@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { Checkpoint, ReminderPermission, Settings } from "../types";
 import { reminderUxCopy } from "./copy";
+import { shouldUseFallbackNotification } from "../notifications";
 import { alarmIdFor, desiredAlarms, dueNow, isReminderEligible } from "./policy";
 import { createMemoryRegistry } from "./registry";
 import { createAlarmScheduler } from "./scheduler";
@@ -442,7 +443,94 @@ describe("reboot, timezone, reinstall, devices", () => {
   });
 });
 
+describe("safe cancellation", () => {
+  it("does not clear reminder records when native cancellation fails", async () => {
+    const record = {
+      ...desiredFrom(checkpoint()),
+      platform: "android" as const,
+      schedulingState: "scheduled" as const,
+      lastSyncAt: new Date().toISOString(),
+    };
+    const registry = createMemoryRegistry([record]);
+    const native = mockNative();
+    native.cancel = async () => { throw new Error("native cancellation failed"); };
+    const scheduler = createAlarmScheduler({
+      platform: "android",
+      registry,
+      native,
+      permission: () => "granted",
+      capabilities: () => ({ ...webCaps(), platform: "android", exactAlarms: true, alarmManager: true, webPush: "unsupported" }),
+    });
+    await assert.rejects(() => scheduler.cancelAll(), /could not cancel every device reminder/);
+    assert.equal(scheduler.getScheduledAlarms().length, 1);
+  });
+
+  it("does not claim success when the reminder registry cannot be cleared", async () => {
+    const memory = createMemoryRegistry();
+    const registry = {
+      read: () => memory.read(),
+      write: (records: Parameters<typeof memory.write>[0]) => memory.write(records),
+      clear: () => false,
+    };
+    const scheduler = createAlarmScheduler({
+      platform: "web",
+      registry,
+      native: null,
+      permission: () => "granted",
+    });
+    await assert.rejects(() => scheduler.cancelAll(), /could not be cleared/);
+  });
+
+  it("retains an individual reminder record when native cancellation fails", async () => {
+    const record = {
+      ...desiredFrom(checkpoint()),
+      platform: "android" as const,
+      schedulingState: "scheduled" as const,
+      lastSyncAt: new Date().toISOString(),
+    };
+    const registry = createMemoryRegistry([record]);
+    const native = mockNative();
+    native.cancel = async () => { throw new Error("native cancellation failed"); };
+    const scheduler = createAlarmScheduler({
+      platform: "android",
+      registry,
+      native,
+      permission: () => "granted",
+      capabilities: () => ({ ...webCaps(), platform: "android", exactAlarms: true, alarmManager: true, webPush: "unsupported" }),
+    });
+    await assert.rejects(() => scheduler.cancelAlarm(record.alarmId), /record was kept for retry/);
+    assert.equal(scheduler.getScheduledAlarms().length, 1);
+  });
+
+  it("keeps stale reminder records when reconciliation cannot cancel the device alarm", async () => {
+    const record = {
+      ...desiredFrom(checkpoint()),
+      platform: "android" as const,
+      schedulingState: "scheduled" as const,
+      lastSyncAt: new Date().toISOString(),
+    };
+    const registry = createMemoryRegistry([record]);
+    const native = mockNative();
+    native.cancel = async () => { throw new Error("native cancellation failed"); };
+    const scheduler = createAlarmScheduler({
+      platform: "android",
+      registry,
+      native,
+      permission: () => "granted",
+      capabilities: () => ({ ...webCaps(), platform: "android", exactAlarms: true, alarmManager: true, webPush: "unsupported" }),
+    });
+    await assert.rejects(() => scheduler.sync([], settings(true), "rt_1"), /record was kept for retry/);
+    assert.equal(scheduler.getScheduledAlarms().length, 1);
+  });
+});
+
 describe("fallback", () => {
+  it("uses page notifications only for failed native schedules when exact alarms exist", () => {
+    assert.equal(shouldUseFallbackNotification(true, "scheduled"), false);
+    assert.equal(shouldUseFallbackNotification(true, "fallback"), true);
+    assert.equal(shouldUseFallbackNotification(true, "listening"), false);
+    assert.equal(shouldUseFallbackNotification(false, "listening"), true);
+  });
   it("native failure falls back to notifications, never scheduled", async () => {
     const native = mockNative({ failSchedule: true });
     const scheduler = createAlarmScheduler({

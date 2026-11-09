@@ -96,17 +96,18 @@ export function createAlarmScheduler(deps: AlarmSchedulerDeps): AlarmScheduler {
   function upsert(record: AlarmRecord) {
     const current = registry.read().filter((item) => item.alarmId !== record.alarmId);
     if (record.schedulingState !== "cancelled") current.push(record);
-    registry.write(current);
+    if (!registry.write(current)) {
+      return { ...record, schedulingState: "failed", lastError: "Reminder status could not be saved on this device." };
+    }
     return record;
   }
 
   async function cancelNative(alarmId: string) {
-    if (native) {
-      try {
-        await native.cancel(alarmId);
-      } catch {
-        /* still drop the local record */
-      }
+    if (!native) return;
+    try {
+      await native.cancel(alarmId);
+    } catch {
+      throw new Error("ROUTA could not cancel a device reminder. Its record was kept for retry.");
     }
   }
 
@@ -117,7 +118,9 @@ export function createAlarmScheduler(deps: AlarmSchedulerDeps): AlarmScheduler {
     if (!alarm.enabled) {
       await cancelNative(alarm.alarmId);
       const cancelled = recordOf(alarm, "cancelled");
-      registry.write(registry.read().filter((item) => item.alarmId !== alarm.alarmId));
+      if (!registry.write(registry.read().filter((item) => item.alarmId !== alarm.alarmId))) {
+        return { ...cancelled, schedulingState: "failed", lastError: "Reminder status could not be saved on this device." };
+      }
       return cancelled;
     }
 
@@ -170,11 +173,15 @@ export function createAlarmScheduler(deps: AlarmSchedulerDeps): AlarmScheduler {
 
     const stale = current.filter((item) => !desiredIds.has(item.alarmId)).map((item) => item.alarmId);
     if (stale.length) {
-      registry.write(current.filter((item) => !stale.includes(item.alarmId)));
+      if (!registry.write(current.filter((item) => !stale.includes(item.alarmId)))) {
+        throw new Error("Outdated reminder records could not be cleared from this device.");
+      }
     }
 
+    const failedRecords: AlarmRecord[] = [];
     for (const alarm of alarms) {
-      await place(alarm, force);
+      const placed = await place(alarm, force);
+      if (placed.schedulingState === "failed") failedRecords.push(placed);
     }
 
     const next = registry.read();
@@ -189,6 +196,11 @@ export function createAlarmScheduler(deps: AlarmSchedulerDeps): AlarmScheduler {
         listeningIds.push(record.checkpointId);
       } else {
         skipped.push({ id: record.checkpointId, reason: stateToStatus(record.schedulingState, exact) });
+      }
+    }
+    for (const record of failedRecords) {
+      if (!skipped.some((item) => item.id === record.checkpointId)) {
+        skipped.push({ id: record.checkpointId, reason: stateToStatus("failed", exact) });
       }
     }
 
@@ -210,7 +222,9 @@ export function createAlarmScheduler(deps: AlarmSchedulerDeps): AlarmScheduler {
     },
     async cancelAlarm(alarmId) {
       await cancelNative(alarmId);
-      registry.write(registry.read().filter((item) => item.alarmId !== alarmId));
+      if (!registry.write(registry.read().filter((item) => item.alarmId !== alarmId))) {
+        throw new Error("Reminder data could not be cleared from this device.");
+      }
     },
     async updateAlarm(alarm) {
       await cancelNative(alarm.alarmId);
@@ -224,8 +238,16 @@ export function createAlarmScheduler(deps: AlarmSchedulerDeps): AlarmScheduler {
     },
     async cancelAll() {
       const current = registry.read();
-      for (const record of current) await cancelNative(record.alarmId);
-      registry.clear();
+      if (native) {
+        for (const record of current) {
+          try {
+            await native.cancel(record.alarmId);
+          } catch {
+            throw new Error("ROUTA could not cancel every device reminder. Your local data was kept.");
+          }
+        }
+      }
+      if (!registry.clear()) throw new Error("Reminder data could not be cleared from this device. Your local data was kept.");
     },
     async sync(checkpoints, settings, routineId = "routine_default") {
       const desired = desiredAlarms({

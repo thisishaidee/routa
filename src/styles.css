@@ -130,20 +130,38 @@ body {
 
 /* Daymark product palette */
 @theme {
-  --color-canvas: #f5f6f2;
-  --color-cream: #f9faf7;
-  --color-paper: #ffffff;
-  --color-ink: #18201c;
-  --color-quiet: #56655d;
-  --color-soft: #647268;
-  --color-line: #dfe4dc;
-  --color-forest: #1f3d2c;
-  --color-forest-mid: #45634c;
-  --color-lime: #b9d62e;
-  --color-mist: #e8efcf;
-  --color-olive: #5c762c;
+  --color-canvas: #f4f2eb;
+  --color-cream: #faf8f2;
+  --color-paper: #fffefa;
+  --color-ink: #20271f;
+  --color-quiet: #626b60;
+  --color-soft: #7a8175;
+  --color-line: #e4e1d7;
+  --color-forest: #263e32;
+  --color-forest-mid: #4a6250;
+  --color-lime: #d3e39b;
+  --color-mist: #edf0df;
+  --color-olive: #5d7149;
   --color-danger: #9a3b32;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+
+/* Product palette follows the selected theme, including system dark mode. */
+.dark {
+  --color-canvas: #171d19;
+  --color-cream: #1d251f;
+  --color-paper: #222b24;
+  --color-ink: #edf0e8;
+  --color-quiet: #b1b9ac;
+  --color-soft: #929d90;
+  --color-line: #39443b;
+  --color-forest: #d5e1c9;
+  --color-forest-mid: #9eaf96;
+  --color-lime: #465a35;
+  --color-mist: #303d2d;
+  --color-olive: #b6c89a;
+  --color-danger: #ef9b8f;
 }
 
 /* Missed state: diagonal hatch. Use as `daymark-hatch` on any element. */

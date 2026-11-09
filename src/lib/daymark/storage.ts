@@ -16,6 +16,8 @@ import {
   type WeekDay,
 } from "./types";
 import { isValidTime, normalizeTime } from "./time";
+import { CHECKIN_KEY, type CheckInState } from "./checkins";
+import { RECOVERY_KEY, type RecoveryState } from "./recovery";
 
 export const STORAGE_KEYS = {
   profile: "routa:v2:profile",
@@ -54,14 +56,14 @@ export function migrateLegacyV2IfNeeded() {
 
 export function hasAnyV2Data() {
   try {
-    return Boolean(
-      localStorage.getItem(STORAGE_KEYS.routine) ||
-        localStorage.getItem(STORAGE_KEYS.profile) ||
-        localStorage.getItem(LEGACY_STORAGE_KEYS.routine) ||
-        localStorage.getItem(LEGACY_STORAGE_KEYS.profile),
-    );
+    const keys = [
+      ...Object.values(STORAGE_KEYS),
+      ...Object.values(LEGACY_STORAGE_KEYS),
+    ];
+    return keys.some((key) => localStorage.getItem(key) !== null);
   } catch {
-    return false;
+    // If storage cannot be inspected, do not risk migrating over existing data.
+    return true;
   }
 }
 
@@ -86,19 +88,22 @@ export function writeSessionEntered() {
   }
 }
 
-export function clearSessionEntered() {
+export function clearSessionEntered(): boolean {
   try {
+    if (typeof sessionStorage === "undefined") return false;
     sessionStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(LEGACY_SESSION_KEY);
+    return sessionStorage.getItem(SESSION_KEY) === null && sessionStorage.getItem(LEGACY_SESSION_KEY) === null;
   } catch {
-    /* ignore */
+    return false;
   }
 }
 
 const FOCUS_IDS = new Set<string>(FOCUS_AREAS.map((item) => item.id));
 
-function readJson(key: string): unknown {
+function readJson(key: string, legacyKey?: string): unknown {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = localStorage.getItem(key) ?? (legacyKey ? localStorage.getItem(legacyKey) : null);
     if (!raw) return null;
     return JSON.parse(raw) as unknown;
   } catch {
@@ -106,11 +111,57 @@ function readJson(key: string): unknown {
   }
 }
 
-function writeJson(key: string, value: unknown) {
+export function findCorruptSnapshotKeys(): string[] {
+  const keys: string[] = [];
+  for (const name of Object.keys(STORAGE_KEYS) as Array<keyof typeof STORAGE_KEYS>) {
+    const currentKey = STORAGE_KEYS[name];
+    const legacyKey = LEGACY_STORAGE_KEYS[name];
+    try {
+      const current = localStorage.getItem(currentKey);
+      const raw = current !== null ? current : localStorage.getItem(legacyKey);
+      if (raw === null) continue;
+      let value: unknown;
+      try {
+        value = JSON.parse(raw) as unknown;
+      } catch {
+        keys.push(name);
+        continue;
+      }
+      const valid =
+        name === "routine"
+          ? value === null || (isRecord(value) && Array.isArray(value.checkpoints))
+          : isRecord(value);
+      if (!valid) keys.push(name);
+    } catch {
+      // If storage cannot be inspected, block writes rather than risk overwriting data.
+      keys.push(name);
+    }
+  }
+  for (const [name, key, requiredArrays] of [
+    ["check-ins", CHECKIN_KEY, ["checkIns", "badges"]],
+    ["recovery", RECOVERY_KEY, ["moves", "dismissed"]],
+  ] as const) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw === null) continue;
+      const value: unknown = JSON.parse(raw);
+      if (!isRecord(value) || requiredArrays.some((field) => !Array.isArray(value[field]))) {
+        keys.push(name);
+      }
+    } catch {
+      keys.push(name);
+    }
+  }
+  return keys;
+}
+
+function writeJson(key: string, value: unknown): boolean {
   try {
+    if (typeof localStorage === "undefined") return false;
     localStorage.setItem(key, JSON.stringify(value));
+    return true;
   } catch {
-    // Storage may be unavailable or full — fail closed.
+    return false;
   }
 }
 
@@ -252,11 +303,11 @@ function coerceNotes(value: unknown): NotesMap {
 
 export function loadSnapshot(): DaymarkSnapshot {
   return coerceSnapshot({
-    profile: readJson(STORAGE_KEYS.profile),
-    routine: readJson(STORAGE_KEYS.routine),
-    progress: readJson(STORAGE_KEYS.progress),
-    notes: readJson(STORAGE_KEYS.notes),
-    settings: readJson(STORAGE_KEYS.settings),
+    profile: readJson(STORAGE_KEYS.profile, LEGACY_STORAGE_KEYS.profile),
+    routine: readJson(STORAGE_KEYS.routine, LEGACY_STORAGE_KEYS.routine),
+    progress: readJson(STORAGE_KEYS.progress, LEGACY_STORAGE_KEYS.progress),
+    notes: readJson(STORAGE_KEYS.notes, LEGACY_STORAGE_KEYS.notes),
+    settings: readJson(STORAGE_KEYS.settings, LEGACY_STORAGE_KEYS.settings),
   });
 }
 
@@ -271,43 +322,76 @@ export function coerceSnapshot(value: unknown): DaymarkSnapshot {
   };
 }
 
-export function applySnapshot(snapshot: DaymarkSnapshot) {
-  saveProfile(snapshot.profile);
-  saveRoutine(snapshot.routine);
-  saveProgress(snapshot.progress);
-  saveNotes(snapshot.notes);
-  saveSettings(snapshot.settings);
+export function applySnapshot(
+  snapshot: DaymarkSnapshot,
+  extras: { checkIns?: CheckInState; recovery?: RecoveryState } = {},
+): { ok: true } | { ok: false; error: string } {
+  if (typeof localStorage === "undefined") {
+    return { ok: false, error: "ROUTA cannot access this device's storage. Your current data was not changed." };
+  }
+
+  const entries: Array<[string, string]> = [
+    [STORAGE_KEYS.profile, JSON.stringify(snapshot.profile)],
+    [STORAGE_KEYS.routine, JSON.stringify(snapshot.routine)],
+    [STORAGE_KEYS.progress, JSON.stringify(snapshot.progress)],
+    [STORAGE_KEYS.notes, JSON.stringify(snapshot.notes)],
+    [STORAGE_KEYS.settings, JSON.stringify(snapshot.settings)],
+  ];
+  if (extras.checkIns) entries.push([CHECKIN_KEY, JSON.stringify(extras.checkIns)]);
+  if (extras.recovery) entries.push([RECOVERY_KEY, JSON.stringify(extras.recovery)]);
+
+  const previous = new Map<string, string | null>();
+  const written: string[] = [];
+  try {
+    for (const [key] of entries) previous.set(key, localStorage.getItem(key));
+    for (const [key, value] of entries) {
+      localStorage.setItem(key, value);
+      written.push(key);
+      if (localStorage.getItem(key) !== value) throw new Error("Storage verification failed.");
+    }
+    return { ok: true };
+  } catch {
+    let rollbackFailed = false;
+    for (const key of written.reverse()) {
+      try {
+        const oldValue = previous.get(key);
+        if (oldValue === null || oldValue === undefined) localStorage.removeItem(key);
+        else localStorage.setItem(key, oldValue);
+      } catch {
+        rollbackFailed = true;
+      }
+    }
+    return {
+      ok: false,
+      error: rollbackFailed
+        ? "ROUTA could not fully restore the previous storage values. Keep this app open and export a backup before making more changes."
+        : "ROUTA could not save that backup. Your previous data has been kept.",
+    };
+  }
 }
 
-export function saveProfile(profile: Profile) {
-  writeJson(STORAGE_KEYS.profile, profile);
-}
+export function saveProfile(profile: Profile): boolean { return writeJson(STORAGE_KEYS.profile, profile); }
 
-export function saveRoutine(routine: Routine | null) {
+export function saveRoutine(routine: Routine | null): boolean {
   if (!routine) {
     try {
+      if (typeof localStorage === "undefined") return false;
       localStorage.removeItem(STORAGE_KEYS.routine);
+      return true;
     } catch {
-      /* ignore */
+      return false;
     }
-    return;
   }
-  writeJson(STORAGE_KEYS.routine, routine);
+  return writeJson(STORAGE_KEYS.routine, routine);
 }
 
-export function saveProgress(progress: ProgressMap) {
-  writeJson(STORAGE_KEYS.progress, progress);
-}
+export function saveProgress(progress: ProgressMap): boolean { return writeJson(STORAGE_KEYS.progress, progress); }
 
-export function saveNotes(notes: NotesMap) {
-  writeJson(STORAGE_KEYS.notes, notes);
-}
+export function saveNotes(notes: NotesMap): boolean { return writeJson(STORAGE_KEYS.notes, notes); }
 
-export function saveSettings(settings: Settings) {
-  writeJson(STORAGE_KEYS.settings, settings);
-}
+export function saveSettings(settings: Settings): boolean { return writeJson(STORAGE_KEYS.settings, settings); }
 
-export function clearV2Storage() {
+export function clearV2Storage(): { ok: true } | { ok: false; error: string } {
   const extra = [
     ...Object.values(LEGACY_STORAGE_KEYS),
     "daymark-done",
@@ -318,22 +402,40 @@ export function clearV2Storage() {
     "routa:v2:checkins",
     "routa:v2:agent",
   ];
-  for (const key of [...Object.values(STORAGE_KEYS), ...extra]) {
-    try {
-      localStorage.removeItem(key);
-    } catch {
-      /* ignore */
-    }
-  }
   try {
-    const pending: string[] = [];
+    if (typeof localStorage === "undefined") return { ok: false, error: "ROUTA cannot access this device's storage. No data was cleared." };
+    const keys = new Set<string>([...Object.values(STORAGE_KEYS), ...extra]);
     for (let i = 0; i < localStorage.length; i += 1) {
       const key = localStorage.key(i);
-      if (key && key.startsWith("daymark-note-")) pending.push(key);
+      if (key && key.startsWith("daymark-note-")) keys.add(key);
     }
-    pending.forEach((key) => localStorage.removeItem(key));
+    const previous = new Map<string, string | null>();
+    for (const key of keys) previous.set(key, localStorage.getItem(key));
+    const removed: string[] = [];
+    try {
+      for (const key of keys) {
+        if (previous.get(key) === null) continue;
+        localStorage.removeItem(key);
+        removed.push(key);
+        if (localStorage.getItem(key) !== null) throw new Error("Storage removal verification failed.");
+      }
+      return { ok: true };
+    } catch {
+      let rollbackFailed = false;
+      for (const key of removed.reverse()) {
+        try {
+          const value = previous.get(key);
+          if (value !== null && value !== undefined) localStorage.setItem(key, value);
+        } catch {
+          rollbackFailed = true;
+        }
+      }
+      return { ok: false, error: rollbackFailed
+        ? "ROUTA could not fully restore the data after the reset failed. Keep the app open and export a backup if possible."
+        : "ROUTA could not clear all local data. Your previous data has been restored." };
+    }
   } catch {
-    /* ignore */
+    return { ok: false, error: "ROUTA could not inspect this device's storage. No data was cleared." };
   }
 }
 

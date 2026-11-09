@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 import { snapshotToJson, parseBackup } from "./backup";
 import { computeHealth, computeInsights, computeSuggestions } from "./insights";
 import { createId } from "./ids";
-import { migrateV1IfNeeded } from "./migration";
+import { hasV1Data, migrateV1IfNeeded } from "./migration";
 import {
   getAlarmScheduler,
   registerReminderWorker,
@@ -39,9 +39,11 @@ import {
 } from "./recovery";
 import {
   applySnapshot,
+  hasAnyV2Data,
   clearSessionEntered,
   clearV2Storage,
   dayProgress,
+  findCorruptSnapshotKeys,
   loadSnapshot,
   migrateLegacyV2IfNeeded,
   readSessionEntered,
@@ -81,6 +83,7 @@ import {
 
 interface DaymarkContextValue {
   ready: boolean;
+  storageWarning: string | null;
   entered: boolean;
   enterApp: () => void;
   now: Date;
@@ -118,7 +121,7 @@ interface DaymarkContextValue {
   requestReminders: () => Promise<ReminderPermission>;
   resetProgress: () => void;
   resetRoutine: () => void;
-  clearAllData: () => void;
+  clearAllData: () => Promise<{ ok: true } | { ok: false; error: string }>;
   exportBackup: () => string;
   importBackup: (raw: string) => { ok: boolean; error?: string };
   recoveryProposals: ReturnType<typeof suggestRecovery>;
@@ -164,6 +167,8 @@ function hydrateRoutine(routine: Routine | null): Routine | null {
 
 export function DaymarkProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
+  const [storageFailures, setStorageFailures] = useState<string[]>([]);
+  const [migrationBlocked, setMigrationBlocked] = useState(false);
   const [entered, setEntered] = useState(false);
   const [now, setNow] = useState(() => new Date());
   const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE);
@@ -181,6 +186,18 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
   const remindersRef = useRef(false);
   routineRef.current = routine;
   remindersRef.current = settings.remindersEnabled;
+
+  const recordStorageResult = (key: string, saved: boolean) => {
+    setStorageFailures((current) => {
+      if (saved) return current.filter((item) => item !== key);
+      return current.includes(key) ? current : [...current, key];
+    });
+  };
+  const storageWarning = storageFailures.includes("corruption")
+    ? "ROUTA found saved data it cannot safely read. Automatic saving is paused so the damaged data is not overwritten. Restore a valid backup or reset local data to continue saving."
+    : storageFailures.length > 0
+      ? "Some changes could not be saved on this device. Check available storage and export a backup before closing ROUTA."
+      : null;
 
   const today = dateKey(now);
   const timeZone = deviceTimeZone();
@@ -214,8 +231,17 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      migrateV1IfNeeded();
+      const shouldMigrateV1 = hasV1Data() && !hasAnyV2Data();
+      if (shouldMigrateV1 && !migrateV1IfNeeded()) {
+        setMigrationBlocked(true);
+        setStorageFailures((current) => current.includes("migration") ? current : [...current, "migration"]);
+      }
       migrateLegacyV2IfNeeded();
+      const corruptKeys = findCorruptSnapshotKeys();
+      if (corruptKeys.length > 0) {
+        setMigrationBlocked(true);
+        setStorageFailures((current) => current.includes("corruption") ? current : [...current, "corruption"]);
+      }
       const snapshot = loadSnapshot();
       setProfile(snapshot.profile);
       setRoutine(hydrateRoutine(snapshot.routine));
@@ -247,47 +273,47 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!ready) return;
-    saveProfile(profile);
+    if (!ready || migrationBlocked) return;
+    recordStorageResult("profile", saveProfile(profile));
   }, [profile, ready]);
 
   useEffect(() => {
-    if (!ready) return;
-    saveRoutine(routine);
+    if (!ready || migrationBlocked) return;
+    recordStorageResult("routine", saveRoutine(routine));
   }, [routine, ready]);
 
   useEffect(() => {
-    if (!ready) return;
-    saveProgress(progress);
+    if (!ready || migrationBlocked) return;
+    recordStorageResult("progress", saveProgress(progress));
   }, [progress, ready]);
 
   useEffect(() => {
-    if (!ready) return;
-    saveNotes(notes);
+    if (!ready || migrationBlocked) return;
+    recordStorageResult("notes", saveNotes(notes));
   }, [notes, ready]);
 
   useEffect(() => {
-    if (!ready) return;
-    saveSettings(settings);
+    if (!ready || migrationBlocked) return;
+    recordStorageResult("settings", saveSettings(settings));
   }, [settings, ready]);
 
   useEffect(() => {
-    if (!ready) return;
-    saveRecovery(recovery);
+    if (!ready || migrationBlocked) return;
+    recordStorageResult("recovery", saveRecovery(recovery));
   }, [recovery, ready]);
 
   useEffect(() => {
-    if (!ready) return;
-    saveCheckIns(journal);
+    if (!ready || migrationBlocked) return;
+    recordStorageResult("checkins", saveCheckIns(journal));
   }, [journal, ready]);
 
   useEffect(() => {
-    if (!ready) return;
-    saveAgentLink(agentLink);
+    if (!ready || migrationBlocked) return;
+    recordStorageResult("agent", saveAgentLink(agentLink));
   }, [agentLink, ready]);
 
   useEffect(() => {
-    if (!ready || !agentLink.enabled) {
+    if (!ready || migrationBlocked || !agentLink.enabled) {
       if (ready && !agentLink.enabled) setAgentStatus("idle");
       return;
     }
@@ -328,8 +354,8 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
   }, [ready, routine, progress, today, checkInKey]);
 
   useEffect(() => {
-    if (!ready || !routine) return;
-    if (getAlarmScheduler().canExactAlarm()) return;
+    if (!ready || migrationBlocked || !routine) return;
+    // tickReminders handles per-checkpoint fallback when a native schedule fails.
     const fire = () => tickReminders({ checkpoints: todayCheckpoints, settings, permission });
     fire();
     const tick = window.setInterval(fire, 15000);
@@ -344,8 +370,11 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
   }, [ready, routine, todayCheckpoints, settings, permission]);
 
   useEffect(() => {
-    if (!ready || !routine) return;
-    void getAlarmScheduler().sync(routine.checkpoints, settings, routine.id);
+    if (!ready || migrationBlocked || !routine) return;
+    void getAlarmScheduler()
+      .sync(routine.checkpoints, settings, routine.id)
+      .then((result) => recordStorageResult("alarms", !result.skipped.some((item) => item.reason === "failed")))
+      .catch(() => recordStorageResult("alarms", false));
   }, [ready, routine, settings, permission, timeZone]);
 
   useEffect(() => {
@@ -558,10 +587,19 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
     setSelectedId(null);
   };
 
-  const clearAllData = () => {
-    void getAlarmScheduler().cancelAll();
-    clearV2Storage();
-    clearSessionEntered();
+  const clearAllData = async (): Promise<{ ok: true } | { ok: false; error: string }> => {
+    try {
+      await getAlarmScheduler().cancelAll();
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : "ROUTA could not cancel reminders." };
+    }
+    const cleared = clearV2Storage();
+    if (!cleared.ok) {
+      if (routine) void getAlarmScheduler().sync(routine.checkpoints, settings, routine.id);
+      return cleared;
+    }
+    const sessionCleared = clearSessionEntered();
+    setMigrationBlocked(false);
     setProfile(DEFAULT_PROFILE);
     setRoutine(null);
     setProgress({});
@@ -572,6 +610,13 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
     setAgentLink(emptyAgentLink());
     setSelectedId(null);
     setEntered(false);
+    if (!sessionCleared) {
+      const error = "Your local data was cleared, but ROUTA could not clear this session state. Close and reopen the app.";
+      setStorageFailures(["session"]);
+      return { ok: false, error };
+    }
+    setStorageFailures([]);
+    return { ok: true };
   };
 
   const currentSnapshot = (): DaymarkSnapshot => ({
@@ -582,17 +627,22 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
     settings,
   });
 
-  const exportBackup = () => snapshotToJson(currentSnapshot());
+  const exportBackup = () => snapshotToJson(currentSnapshot(), { checkIns: journal, recovery });
 
   const importBackup = (raw: string) => {
     const parsed = parseBackup(raw);
     if (!parsed.ok) return parsed;
-    applySnapshot(parsed.snapshot);
+    const applied = applySnapshot(parsed.snapshot, { checkIns: parsed.checkIns, recovery: parsed.recovery });
+    if (!applied.ok) return applied;
+    setMigrationBlocked(false);
+    setStorageFailures((current) => current.filter((item) => item !== "migration" && item !== "corruption"));
     setProfile(parsed.snapshot.profile);
     setRoutine(hydrateRoutine(parsed.snapshot.routine));
     setProgress(parsed.snapshot.progress);
     setNotes(parsed.snapshot.notes);
     setSettings(parsed.snapshot.settings);
+    if (parsed.checkIns) setJournal(parsed.checkIns);
+    if (parsed.recovery) setRecovery(parsed.recovery);
     setSelectedId(null);
     return { ok: true };
   };
@@ -635,6 +685,7 @@ export function DaymarkProvider({ children }: { children: ReactNode }) {
 
   const value: DaymarkContextValue = {
     ready,
+    storageWarning,
     entered,
     enterApp,
     now,
