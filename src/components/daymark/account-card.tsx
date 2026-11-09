@@ -40,4 +40,51 @@ export function AccountCard() {
 
   const run = async (action: () => Promise<void>) => {
     setBusy(true); setError(""); setMessage("");
-    try { await action(); }...[truncated]
+    try { await action(); }...[truncated]    });
+    if (issue) throw issue;
+    const saved = Array.isArray(data) ? data[0] : data;
+    if (!saved?.revision) throw new Error("Cloud save was not confirmed. Your local data is safe.");
+    setRevision(Number(saved.revision)); setRemote(null);
+    setMessage("Your ROUTA backup is saved to your account.");
+  };
+
+  const sync = () => run(async () => {
+    if (remote) {
+      setMessage("Choose one of the two options below before syncing. This prevents an accidental overwrite.");
+      return;
+    }
+    const latest = await readCloud();
+    if (!latest) { await saveCloud(0); return; }
+    if (revision === null || Number(latest.revision) !== revision) {
+      setRemote(latest);
+      setRevision(Number(latest.revision));
+      setMessage(revision === null
+        ? "A cloud backup already exists. Choose which copy to use."
+        : "The cloud copy changed on another device. Choose which copy to keep.");
+      return;
+    }
+    await saveCloud(revision);
+  });
+
+  const restoreCloud = () => run(async () => {
+    const latest = remote || await readCloud();
+    if (!latest?.payload?.snapshot) throw new Error("No supported cloud backup was found. Local data was not changed.");
+    const backup = {
+      app: "routa", version: SNAPSHOT_VERSION, exportedAt: new Date().toISOString(),
+      snapshot: latest.payload.snapshot,
+      ...(latest.payload.checkIns ? { checkIns: latest.payload.checkIns } : {}),
+      ...(latest.payload.recovery ? { recovery: latest.payload.recovery } : {}),
+    };
+    const result = importBackup(JSON.stringify(backup));
+    if (!result.ok) throw new Error(result.error || "Cloud backup could not be restored.");
+    setRevision(Number(latest.revision)); setRemote(null);
+    setMessage("Cloud data restored on this device.");
+  });
+
+  const replaceCloud = () => run(async () => {
+    const latest = remote || await readCloud();
+    if (!latest) { await saveCloud(0); return; }
+    await saveCloud(Number(latest.revision));
+  });
+
+  if (!supabaseConfigu...[truncated]
